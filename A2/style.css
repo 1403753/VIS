@@ -1,0 +1,19 @@
+svg {
+    background-color: lightblue;
+}
+
+.graticule {
+    stroke: slategrey;
+    stroke-width: 0.5px;
+    stroke-opacity: 0.5;
+}
+
+.land {
+    fill: sandybrown;
+}
+
+.boundary {
+    fill: none;
+    stroke: black;
+    stroke-width: 0.5px;
+}
