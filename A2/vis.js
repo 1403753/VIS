@@ -1,7 +1,12 @@
-var city_counter = new Array(8).fill(0);
+var cityNum = 8;
+
+var city_counter = new Array(cityNum).fill(0);
+var pinned = new Array(cityNum).fill(false);
+var context = [];
 
 var svgHeight = 700;
 var svgWidth = 950;
+
 
 var svg = d3.select('body')
     .append('svg')
@@ -11,7 +16,7 @@ var svg = d3.select('body')
 
 var projection = d3.geoMercator()
     .scale(1300)
-    .translate([svgWidth / .385, svgHeight / .56]);
+    .translate([svgWidth / .410, svgHeight / .56]);
 
 var path = d3.geoPath()
     .projection(projection);
@@ -23,7 +28,74 @@ svg.append('path')
     .attr('class', 'graticule')
     .attr('d', path);
 
-var context = [];
+
+d3.select('body')
+    .append('div')
+    .attr('id', 'app')
+    .append('p')
+    .attr('d3-html', 'countdown');
+
+d3.require('d3-view', 'd3-timer').then(async d3 => {
+
+    const vm = d3.view({model: {countdown: 20}});
+    await vm.mount("#app");
+
+    const timer = d3.interval(() => {
+        vm.model.countdown -= 1;
+        if (!vm.model.countdown) {
+            vm.model.countdown = 'Welcome to d3-view!';
+            timer.stop();
+        }
+    }, 1000);
+});
+
+
+
+
+
+
+// load background map
+d3.json('50m.json', function (d) {
+
+    svg.insert('path', '.graticule')
+        .datum(topojson.feature(d, d.objects.land))
+        .attr('class', 'land')
+        .attr('d', path);
+
+    svg.insert('path', '.graticule')
+        .datum(topojson.mesh(d, d.objects.countries, function (a, b) {
+            return a !== b;
+        }))
+        .attr('class', 'boundary')
+        .attr('d', path);
+
+    // add axes
+    var earthRadius = 3959;
+
+    var xdist = d3.geoDistance(projection.invert([50, 0]), projection.invert([svgWidth, 0])) * earthRadius;
+    var ydist = d3.geoDistance(projection.invert([0, 50]), projection.invert([0, svgHeight])) * earthRadius;
+
+    var x_scale = d3.scaleLinear()
+        .range([50, svgWidth])
+        .domain([0, xdist]);
+
+    var y_scale = d3.scaleLinear()
+        .range([svgHeight, 50])
+        .domain([0, ydist]);
+
+    svg.append('g')
+        .attr('transform', 'translate(0,' + 650 + ')')
+        .call(d3.axisBottom(x_scale));
+
+    svg.append('g')
+        .attr('transform', 'translate(' + 50 + ',' + -50 + ')')
+        .call(d3.axisLeft(y_scale));
+
+    svg.append('text')
+        .attr('x', 62)
+        .attr('y', 670)
+        .text('(miles)', 'sans-serif');
+});
 
 d3.text('urbana_crimes.csv', function(error, data) {
 // d3.text('urbana_crimes_medium.csv', function(error, data) {
@@ -78,7 +150,8 @@ d3.text('urbana_crimes.csv', function(error, data) {
         return true;
     });
 
-    // // add criminal locations
+
+    // // add criminal locations TOO SLOW
     // svg.selectAll('circle')
     //     .data(context)
     //     .enter().append('circle')
@@ -92,62 +165,19 @@ d3.text('urbana_crimes.csv', function(error, data) {
     //     });
 
 
-    // load background map
-    d3.json('50m.json', function (d) {
-
-        svg.insert('path', '.graticule')
-            .datum(topojson.feature(d, d.objects.land))
-            .attr('class', 'land')
-            .attr('d', path);
-
-        svg.insert('path', '.graticule')
-            .datum(topojson.mesh(d, d.objects.countries, function (a, b) {
-                return a !== b;
-            }))
-            .attr('class', 'boundary')
-            .attr('d', path);
-
-        // add axes
-        var earthRadius = 3959;
-
-        var xdist = d3.geoDistance(projection.invert([50, 0]), projection.invert([svgWidth, 0])) * earthRadius;
-        var ydist = d3.geoDistance(projection.invert([0, 50]), projection.invert([0, svgHeight])) * earthRadius;
-
-        var x_scale = d3.scaleLinear()
-            .range([50, svgWidth])
-            .domain([0, xdist]);
-
-        var y_scale = d3.scaleLinear()
-            .range([svgHeight, 50])
-            .domain([0, ydist]);
-
-        svg.append('g')
-            .attr('transform', 'translate(0,' + 650 + ')')
-            .call(d3.axisBottom(x_scale));
-
-        svg.append('g')
-            .attr('transform', 'translate(' + 50 + ',' + -50 + ')')
-            .call(d3.axisLeft(y_scale));
-
-        svg.append('text')
-            .attr('x', 62)
-            .attr('y', 670)
-            .text('(miles)', 'sans-serif');
-    });
 
     var cities = svg.append('g');
-    var centers = svg.append('g')
     var legend = svg.append('g');
 
     // add cities, lines and circles
     d3.csv('cities.csv', function (error, data) {
 
-        centers.selectAll('text')
+        cities.selectAll('text')
             .data(data)
             .enter()
             .append('text')
             .attr('id', function (d, i) {
-                return 't' + '_' + i;
+                return 'label_' + i;
             })
             .attr('x', function (d) {
                 return projection([d.longitude, d.latitude])[0];
@@ -164,28 +194,29 @@ d3.text('urbana_crimes.csv', function(error, data) {
             })
             .attr('opacity', 0);
 
-        cities.selectAll('circle')
-            .data(data)
-            .enter()
-            .append('circle')
-            .attr('class', 'growCircle')
-            .attr('cx', function (d) {
-                return projection([d.longitude, d.latitude])[0];
-            })
-            .attr('cy', function (d) {
-                return projection([d.longitude, d.latitude])[1];
-            });
+        // cities.selectAll('circle')
+        //     .data(data)
+        //     .enter()
+        //     .append('circle')
+        //     .attr('class', 'growCircle')
+        //     .attr('cx', function (d) {
+        //         return projection([d.longitude, d.latitude])[0];
+        //     })
+        //     .attr('cy', function (d) {
+        //         return projection([d.longitude, d.latitude])[1];
+        //     });
 
         cities.selectAll('line')
             .data(data)
             .enter()
             .append('line')
+            .attr('id', function (d, i) {
+                return 'line_' + i;
+            })
             .attr('stroke', function (d) {
                 return d.color;
             })
-            .attr('stroke-width', function (d) {
-                return Math.log(city_counter[d.id] + 1);
-            })
+            .attr('stroke-width', 0)
             .attr('x1', function (d) {
                 return projection([
                     d.longitude,
@@ -210,7 +241,7 @@ d3.text('urbana_crimes.csv', function(error, data) {
                 ])[1]
             );
 
-        centers.selectAll('circle')
+        cities.selectAll('circle')
             .data(data)
             .enter()
             .append('circle')
@@ -221,39 +252,90 @@ d3.text('urbana_crimes.csv', function(error, data) {
             .attr('cy', function (d) {
                 return projection([d.longitude, d.latitude])[1];
             })
-            .attr('r', 10)
-            .attr('stroke-width', 1)
+            .attr('r', 15)
+            .attr('stroke-width', 3)
             .style('stroke', 'black')
-            .style('fill', 'ghostwhite')
+            .style('fill', 'red')
             .on('mouseover', function (d, i) {
-                d3.select(this)
-                    .transition()
-                    .attr('r', function (d) {
-                        return Math.log(city_counter[d.id] + 1) * 10;
-                    })
-                    .style('fill', function (d) {
-                        return d.color;
-                    })
-                    .style('opacity', .45);
+                if (!pinned[i]) {
+                    d3.select(this)
+                        .transition()
+                        .duration(100)
+                        .attr('r', Math.log(city_counter[i] + 1) * 10)
+                        .attr('stroke-width', 1)
+                        .style('fill', function (d) {
+                            return d.color;
+                        })
+                        .style('opacity', .45);
 
-                d3.select('#t' + '_' + i)
-                    .transition()
-                    .attr('opacity', 1)
-                    .attr('dy', function () {
-                        return (Math.log(city_counter[d.id] + 1) * 10 + 12) * (data[0].latitude <= d.latitude ? -1 : 1.2);
-                    });
+                    d3.select('#label_' + i)
+                        .transition()
+                        .duration(500)
+                        .attr('dy', (Math.log(city_counter[i] + 1) * 10 + 12) * (data[0].latitude <= d.latitude ? -1 : 1.2))
+                        .attr('opacity', 1);
+
+                    d3.select('#line_' + i)
+                        .transition()
+                        .attr('stroke-width', Math.log(city_counter[i] + 1));
+                }
             })
             .on('mouseout', function (d, i) {
-                d3.select(this)
-                    .transition()
-                    .attr('r', 10)
-                    .style('fill', 'ghostwhite')
-                    .style('opacity', 1);
+                if (!pinned[i]) {
+                    d3.select(this)
+                        .transition()
+                        .attr('r', 15)
+                        .style('fill', 'red')
+                        .attr('stroke-width', 3)
+                        .style('opacity', 1);
 
-                d3.select('#t' + '_' + i)
-                    .transition()
-                    .attr('dy', 0)
-                    .attr('opacity', 0);
+                    d3.select('#label_' + i)
+                        .transition()
+                        .attr('dy', 0)
+                        .attr('opacity', 0);
+
+                    d3.select('#line_' + i)
+                        .transition()
+                        .attr('stroke-width', 0);
+                }
+            })
+            .on('click', function (d, i) {
+                pinned[i] = !pinned[i];
+                if (pinned[i]) {
+                    d3.select(this)
+                        .transition()
+                        .attr('r', 10)
+                        .style('fill', function (d) {
+                            return d.color;
+                        })
+                        .attr('stroke-width', 3)
+                        .style('opacity', 1);
+
+                    d3.select('#label_' + i)
+                        .transition()
+                        .attr('dy', 10 * (data[0].latitude <= d.latitude ? -2 : 2.5))
+                        .attr('opacity', 0.2);
+
+                } else {
+                    d3.select(this)
+                        .transition()
+                        .duration(100)
+                        .attr('r', 15)
+                        .attr('stroke-width', 1)
+                        .style('fill', function (d) {
+                            return d.color;
+                        })
+                        .style('opacity', .45);
+
+                    d3.select('#label_' + i)
+                        .transition()
+                        .duration(100)
+                        .attr('dy', 15 * (data[0].latitude <= d.latitude ? -1.5 : 2.5))
+                        .attr('opacity', 1);
+
+                    d3.select('#line_' + i)
+                        .transition()
+                        .attr('stroke-width', Math.log(city_counter[i] + 1));
+                }
             });
 
 
@@ -262,8 +344,8 @@ d3.text('urbana_crimes.csv', function(error, data) {
             .enter()
             .append('rect')
             .attr('x', 8.5 * svgWidth / 10)
-            .attr('y', function (d) {
-                return 6 * svgHeight / 10 + d.id * 20;
+            .attr('y', function (d, i) {
+                return 6 * svgHeight / 10 + i * 20;
             })
             .attr('width', 10)
             .attr('height', 10)
@@ -276,17 +358,28 @@ d3.text('urbana_crimes.csv', function(error, data) {
             .enter()
             .append('text')
             .attr('x', 8.5 * svgWidth / 10)
-            .attr('y', function (d) {
-                return 6 * svgHeight / 10 + d.id * 20;
+            .attr('y', function (d, i) {
+                return 6 * svgHeight / 10 + i * 20;
             })
             .attr('dx', 17)
             .attr('dy', 10)
             .style('fill', 'black')
             .attr('text-anchor', 'start')
             .attr('font-family', 'sans-serif')
-            .text(function (d) {
-                return d.city + ': ' + city_counter[d.id];
+            .text(function (d, i) {
+                return d.city + ': ' + city_counter[i];
             });
     });
 
-});
+
+
+
+
+
+}); // end d3.text
+
+
+
+
+
+
