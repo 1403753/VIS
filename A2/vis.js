@@ -296,7 +296,7 @@ d3.text('urbana_crimes.csv', function(error, data) {
                 let newdata = [];
                 if (pinned.includes(true)) {
                     d3.select('#window')
-                        .attr('opacity', 0.5);// open window
+                        .attr('opacity', .9);// open window
 
                     let i, k = 0;
                     for (i = 0; i < pinned.length; ++i) {
@@ -391,18 +391,23 @@ function update(data) {
 
     update.enter()
         .append('text')
-        .attr('x', 8.5 * svgWidth / 10)
+        .attr('x', 7 * svgWidth / 10)
         .attr('y', function (d, i) {
-            return 6 * svgHeight / 10 + i * 20;
+            return 4 * svgHeight / 10 + i * 20;
         })
         .attr('dx', 17)
         .attr('dy', 10)
         .style('fill', 'black')
         .attr('text-anchor', 'start')
         .attr('font-family', 'sans-serif')
-        .text(function (d, i) {
-            return d.city + ', ' + data[i].city +': ' + d.id + ': ' + d.counter;
+        .text(function (d) {
+            return d.city + ': ' + d.counter;
         });
+
+    update.text(function (d) {
+        return d.city + ': ' + d.counter;
+    });
+
     update.exit()
         .remove();
 }
