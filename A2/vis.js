@@ -7,6 +7,8 @@ var context = [];
 var svgHeight = 700;
 var svgWidth = 950;
 
+var cities;
+var legend;
 
 var svg = d3.select('body')
     .append('svg')
@@ -27,31 +29,6 @@ svg.append('path')
     .datum(graticule)
     .attr('class', 'graticule')
     .attr('d', path);
-
-
-d3.select('body')
-    .append('div')
-    .attr('id', 'app')
-    .append('p')
-    .attr('d3-html', 'countdown');
-
-d3.require('d3-view', 'd3-timer').then(async d3 => {
-
-    const vm = d3.view({model: {countdown: 20}});
-    await vm.mount("#app");
-
-    const timer = d3.interval(() => {
-        vm.model.countdown -= 1;
-        if (!vm.model.countdown) {
-            vm.model.countdown = 'Welcome to d3-view!';
-            timer.stop();
-        }
-    }, 1000);
-});
-
-
-
-
 
 
 // load background map
@@ -166,8 +143,20 @@ d3.text('urbana_crimes.csv', function(error, data) {
 
 
 
-    var cities = svg.append('g');
-    var legend = svg.append('g');
+    cities = svg.append('g');
+    legend = svg.append('g');
+
+    var windowWidth = 3 * svgWidth / 10;
+    var windowHeight = 5 * svgHeight / 10;
+
+    legend.append('rect')
+        .attr('id', 'window')
+        .attr('x', 6.66 * svgWidth / 10)
+        .attr('y', 3 * svgHeight / 10)
+        .attr('width', windowWidth)
+        .attr('height', windowHeight)
+        .attr('opacity', 0)
+        .style('fill', 'white');
 
     // add cities, lines and circles
     d3.csv('cities.csv', function (error, data) {
@@ -194,6 +183,10 @@ d3.text('urbana_crimes.csv', function(error, data) {
             })
             .attr('opacity', 0);
 
+            for(let i = 0; i < data.length; ++i) {
+                data[i].counter = city_counter[i];
+            }
+        // too expensive operation
         // cities.selectAll('circle')
         //     .data(data)
         //     .enter()
@@ -261,7 +254,7 @@ d3.text('urbana_crimes.csv', function(error, data) {
                     d3.select(this)
                         .transition()
                         .duration(100)
-                        .attr('r', Math.log(city_counter[i] + 1) * 10)
+                        .attr('r', Math.log(data[i].counter + 1) * 10)
                         .attr('stroke-width', 1)
                         .style('fill', function (d) {
                             return d.color;
@@ -271,12 +264,12 @@ d3.text('urbana_crimes.csv', function(error, data) {
                     d3.select('#label_' + i)
                         .transition()
                         .duration(500)
-                        .attr('dy', (Math.log(city_counter[i] + 1) * 10 + 12) * (data[0].latitude <= d.latitude ? -1 : 1.2))
+                        .attr('dy', (Math.log(data[i].counter + 1) * 10 + 12) * (data[0].latitude <= d.latitude ? -1 : 1.2))
                         .attr('opacity', 1);
 
                     d3.select('#line_' + i)
                         .transition()
-                        .attr('stroke-width', Math.log(city_counter[i] + 1));
+                        .attr('stroke-width', Math.log(data[i].counter + 1));
                 }
             })
             .on('mouseout', function (d, i) {
@@ -300,6 +293,23 @@ d3.text('urbana_crimes.csv', function(error, data) {
             })
             .on('click', function (d, i) {
                 pinned[i] = !pinned[i];
+                let newdata = [];
+                if (pinned.includes(true)) {
+                    d3.select('#window')
+                        .attr('opacity', 0.5);// open window
+
+                    let i, k = 0;
+                    for (i = 0; i < pinned.length; ++i) {
+                        if (pinned[i])
+                            newdata[k++] = data[i];
+                    }
+
+                    update(newdata);
+                } else {
+                    update([]);
+                    d3.select('#window')
+                        .attr('opacity', 0);// close window
+                }
                 if (pinned[i]) {
                     d3.select(this)
                         .transition()
@@ -334,52 +344,136 @@ d3.text('urbana_crimes.csv', function(error, data) {
 
                     d3.select('#line_' + i)
                         .transition()
-                        .attr('stroke-width', Math.log(city_counter[i] + 1));
+                        .attr('stroke-width', Math.log(data[i].counter + 1));
                 }
             });
 
 
-        legend.selectAll('rect')
-            .data(data)
-            .enter()
-            .append('rect')
-            .attr('x', 8.5 * svgWidth / 10)
-            .attr('y', function (d, i) {
-                return 6 * svgHeight / 10 + i * 20;
-            })
-            .attr('width', 10)
-            .attr('height', 10)
-            .style('fill', function (d) {
-                return d.color;
-            });
-
-        legend.selectAll('text')
-            .data(data)
-            .enter()
-            .append('text')
-            .attr('x', 8.5 * svgWidth / 10)
-            .attr('y', function (d, i) {
-                return 6 * svgHeight / 10 + i * 20;
-            })
-            .attr('dx', 17)
-            .attr('dy', 10)
-            .style('fill', 'black')
-            .attr('text-anchor', 'start')
-            .attr('font-family', 'sans-serif')
-            .text(function (d, i) {
-                return d.city + ': ' + city_counter[i];
-            });
+        // legend.selectAll('rect')
+        //     .data(data)
+        //     .enter()
+        //     .append('rect')
+        //     .attr('id', 'rect-points')
+        //     .attr('x', 8.5 * svgWidth / 10)
+        //     .attr('y', function (d, i) {
+        //         return 6 * svgHeight / 10 + i * 20;
+        //     })
+        //     .attr('width', 10)
+        //     .attr('height', 10)
+        //     .style('fill', function (d) {
+        //         return d.color;
+        //     });
+        //
+        // legend.selectAll('text')
+        //     .data(data)
+        //     .enter()
+        //     .append('text')
+        //     .attr('x', 8.5 * svgWidth / 10)
+        //     .attr('y', function (d, i) {
+        //         return 6 * svgHeight / 10 + i * 20;
+        //     })
+        //     .attr('dx', 17)
+        //     .attr('dy', 10)
+        //     .style('fill', 'black')
+        //     .attr('text-anchor', 'start')
+        //     .attr('font-family', 'sans-serif')
+        //     .text(function (d, i) {
+        //         return d.city + ': ' + d.counter;
+        //     });
     });
-
-
-
-
-
-
 }); // end d3.text
 
+function update(data) {
+    var update = legend.selectAll('text')
+        .data(data, function (d) {
+            return d;
+        });
 
-
+    update.enter()
+        .append('text')
+        .attr('x', 8.5 * svgWidth / 10)
+        .attr('y', function (d, i) {
+            return 6 * svgHeight / 10 + i * 20;
+        })
+        .attr('dx', 17)
+        .attr('dy', 10)
+        .style('fill', 'black')
+        .attr('text-anchor', 'start')
+        .attr('font-family', 'sans-serif')
+        .text(function (d, i) {
+            return d.city + ', ' + data[i].city +': ' + d.id + ': ' + d.counter;
+        });
+    update.exit()
+        .remove();
+}
+// (function () {
+//
+//     var modal = {
+//         model: {
+//             modalTitle: "d3-view modal",
+//             modalBody: faker.lorem.sentences(3),
+//             showModal: false,
+//             $showModal () {
+//                 this.showModal = true;
+//             },
+//             $hideModal () {
+//                 this.showModal = false;
+//             }
+//         },
+//         directive: {
+//             refresh (model, show) {
+//                 if (!this.passes) return;
+//                 var sel = this.sel,
+//                     modal = sel.classed('modal');
+//                 if (show) {
+//                     sel.style('display', 'block').classed('show', true);
+//                     if (modal) {
+//                         var height = sel.style('height');
+//                         sel.style('top', '-' + height);
+//                         this.transition(sel).ease(d3.easeExpOut).style('top', '0px');
+//                     }
+//                 }
+//                 else {
+//                     var op = sel.style('opacity'),
+//                         t = this.transition(sel);
+//                     sel.classed('show', false);
+//                     if (modal) {
+//                         var height = sel.style('height');
+//                         t.style('top', '-' + height).on('end', function () {
+//                             sel.style('display', 'none');
+//                         });
+//                     } else
+//                         t.style('opacity', 0);
+//                     t.on('end', function () {
+//                         sel.style('display', 'none').style('opacity', op);
+//                     });
+//                 }
+//             }
+//         },
+//         render: function () {
+//             return this.renderFromUrl('./modal.html')
+//         }
+//     };
+//
+//     var vm = d3.view({
+//         model: {
+//             $modal() {
+//                 var modal = vm.select('.modal');
+//                 if (!modal.size())
+//                     vm.select('svg').append('modal').mount(null, v => v.model.$showModal());
+//                 else
+//                     modal.model().$showModal();
+//             }
+//         },
+//         components: {
+//             modal: modal
+//         },
+//         directives: {
+//             modal: modal.directive
+//         }
+//     });
+//     vm.mount('svg');
+// }());
 
 
 
