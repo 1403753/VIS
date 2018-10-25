@@ -167,7 +167,7 @@ function bindIndex(parent, group, enter, update, exit, data) {
       groupLength = group.length,
       dataLength = data.length;
 
-  // Put any non-null nodes that fit into update.
+  // Put any non-null nodes that fit into updatePopup.
   // Put any null nodes into enter.
   // Put any remaining data into enter.
   for (; i < dataLength; ++i) {
@@ -210,7 +210,7 @@ function bindKey(parent, group, enter, update, exit, data, key) {
   }
 
   // Compute the key for each datum.
-  // If there a node associated with this key, join and add it to update.
+  // If there a node associated with this key, join and add it to updatePopup.
   // If there is not (or the key is a duplicate), add it to enter.
   for (i = 0; i < dataLength; ++i) {
     keyValue = keyPrefix + key.call(parent, data[i], i, data);
@@ -256,7 +256,7 @@ function selection_data(value, key) {
 
     bind(parent, group, enterGroup, updateGroup, exitGroup, data, key);
 
-    // Now connect the enter nodes to their following update node, such that
+    // Now connect the enter nodes to their following updatePopup node, such that
     // appendChild can insert the materialized enter node before this node,
     // rather than at the end of the parent node.
     for (var i0 = 0, i1 = 0, previous, next; i0 < dataLength; ++i0) {

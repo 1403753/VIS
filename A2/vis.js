@@ -8,7 +8,7 @@ var svgHeight = 700;
 var svgWidth = 950;
 
 var cities;
-var legend;
+// var legend;
 
 var svg = d3.select('body')
     .append('svg')
@@ -99,7 +99,7 @@ d3.text('urbana_crimes.csv', function(error, data) {
     context = context.filter(function (d) {
         if (!d) return false;
 
-        if (d.length != 4) {
+        if (d.length !== 4) {
             return false;
         }
 
@@ -146,19 +146,11 @@ d3.text('urbana_crimes.csv', function(error, data) {
 
 
     cities = svg.append('g');
-    legend = svg.append('g');
+    // legend = svg.append('g');
 
-    var windowWidth = 3 * svgWidth / 10;
-    var windowHeight = 5 * svgHeight / 10;
-
-    legend.append('rect')
-        .attr('id', 'window')
-        .attr('x', 6.66 * svgWidth / 10)
-        .attr('y', 3 * svgHeight / 10)
-        .attr('width', windowWidth)
-        .attr('height', windowHeight)
-        .attr('opacity', 0)
-        .style('fill', 'white');
+    var tooltip = d3.select('body').append('div')
+        .attr('class', 'tooltip')
+        .style('opacity', 0);
 
     // add cities, lines and circles
     d3.csv('cities.csv', function (error, data) {
@@ -183,7 +175,7 @@ d3.text('urbana_crimes.csv', function(error, data) {
             .text(function (d) {
                 return d.city;
             })
-            .attr('opacity', 0);
+            .style('opacity', 0);
 
             for(let i = 0; i < data.length; ++i) {
                 data[i].counter = city_counter[i];
@@ -252,6 +244,7 @@ d3.text('urbana_crimes.csv', function(error, data) {
             .style('stroke', 'black')
             .style('fill', 'red')
             .on('mouseover', function (d, i) {
+
                 if (!pinned[i]) {
                     d3.select(this)
                         .transition()
@@ -267,38 +260,28 @@ d3.text('urbana_crimes.csv', function(error, data) {
                         .transition()
                         .duration(500)
                         .attr('dy', (Math.log(data[i].counter + 1) * 10 + 12) * (data[0].latitude <= d.latitude ? -1 : 1.2))
-                        .attr('opacity', 1);
+                        .style('opacity', 1);
 
                     d3.select('#line_' + i)
                         .transition()
                         .attr('stroke-width', Math.log(data[i].counter + 1));
                 } else {
-                    let newdata = [];
-                    if (pinned.includes(true)) {
-                        d3.select('#window')
-                            .attr('opacity', .9);// open window
 
-                        let i, k = 0;
-                        for (i = 0; i < pinned.length; ++i) {
-                            if (pinned[i])
-                                newdata[k++] = data[i];
-                        }
+                    tooltip.transition()
+                        .duration(800)
+                        .style('opacity', 0.9);
 
-                        update(newdata);
-                    } else {
-                        update([]);
-                        d3.select('#window')
-                            .attr('opacity', 0);// close window
-                    }
-                    // popin();
+                    tooltip.html('click to unpin')
+                        .style('left', (d3.event.pageX + 10) + 'px')
+                        .style('top', (d3.event.pageY - 35) + 'px');
+
+
                 }
             })
             .on('mouseout', function (d, i) {
-                if (pinned.includes(true)) {
-                    update([]);
-                    d3.select('#window')
-                        .attr('opacity', 0);// close window
-                }
+                tooltip.transition()
+                    .duration(100)
+                    .style('opacity', 0);
                 if (!pinned[i]) {
                     d3.select(this)
                         .transition()
@@ -310,34 +293,23 @@ d3.text('urbana_crimes.csv', function(error, data) {
                     d3.select('#label_' + i)
                         .transition()
                         .attr('dy', 0)
-                        .attr('opacity', 0);
+                        .style('opacity', 0);
 
                     d3.select('#line_' + i)
                         .transition()
                         .attr('stroke-width', 0);
-                } else {
-                    // popout();
                 }
             })
             .on('click', function (d, i) {
                 pinned[i] = !pinned[i];
-                // let newdata = [];
-                // if (pinned.includes(true)) {
-                //     d3.select('#window')
-                //         .attr('opacity', .9);// open window
-                //
-                //     let i, k = 0;
-                //     for (i = 0; i < pinned.length; ++i) {
-                //         if (pinned[i])
-                //             newdata[k++] = data[i];
-                //     }
-                //
-                //     update(newdata);
-                // } else {
-                //     update([]);
-                //     d3.select('#window')
-                //         .attr('opacity', 0);// close window
-                // }
+
+                let newdata = [];
+                let j, k = 0;
+                for (j = 0; j < pinned.length; ++j) {
+                    if (pinned[j])
+                        newdata[k++] = data[j];
+                }
+                
                 if (pinned[i]) {
                     d3.select(this)
                         .transition()
@@ -351,9 +323,9 @@ d3.text('urbana_crimes.csv', function(error, data) {
                     d3.select('#label_' + i)
                         .transition()
                         .attr('dy', 10 * (data[0].latitude <= d.latitude ? -2 : 2.5))
-                        .attr('opacity', 0.2);
+                        .style('opacity', 0.2);
 
-                    popin();
+                    popin(newdata);
 
                 } else {
                     d3.select(this)
@@ -370,13 +342,13 @@ d3.text('urbana_crimes.csv', function(error, data) {
                         .transition()
                         .duration(100)
                         .attr('dy', 15 * (data[0].latitude <= d.latitude ? -1.5 : 2.5))
-                        .attr('opacity', 1);
+                        .style('opacity', 1);
 
                     d3.select('#line_' + i)
                         .transition()
                         .attr('stroke-width', Math.log(data[i].counter + 1));
-
-                    popout();
+                    updatePopup(newdata);
+                    // popout();
                 }
             });
 
@@ -416,7 +388,9 @@ d3.text('urbana_crimes.csv', function(error, data) {
     });
 }); // end d3.text
 
-function update(data) {
+var popup;
+
+function updatePopup(data) {
     var update = popup.selectAll('#textdata')
         .data(data, function (d) {
             return d;
@@ -427,7 +401,7 @@ function update(data) {
         .attr('id', 'textdata')
         .attr('x', 0)
         .attr('y', function (d, i) {
-            return i * 20;
+            return i * 20 + 30;
         })
         .attr('dx', 17)
         .attr('dy', 10)
@@ -446,25 +420,33 @@ function update(data) {
         .remove();
 }
 
-var popup;
 
-function popin() {
+function drawTable(data) {
+
+}
+
+function popin(data) {
     popout();
-
     popup = d3.select('svg')
         .append('g')
         .attr('id', 'popup')
-        .attr('class', 'tooltip')
         .append('svg')
         .attr('height', 200)
         .attr('width', 300)
-        .attr('x', (d3.event.pageX) + 'px')
-        .attr('y', (d3.event.pageY) + 'px')
+        .attr('x', 620)
+        .attr('y', 420);
 
     popup.append('rect')
         .attr('width', 300)
         .attr('height', 200)
-        .style('fill', 'ghostwhite');
+        .style('fill', 'ghostwhite')
+        .style('stroke', 'black');
+
+    popup.append('text')
+        .text('<< close me, or drag me around!')
+        .attr('x', 25)
+        .attr('y', 15)
+        .style('fill', 'red');
 
     var close = popup.append('g');
 
@@ -496,7 +478,14 @@ function popin() {
         popout();
     });
 
-        // .attr('style', 'outline: thin solid black;');
+    popup.call(d3.drag()
+        .on('start', dragstarted)
+        .on('drag', dragged));
+
+    updatePopup(data);
+
+
+    // .attr('style', 'outline: thin solid black;');
         // .attr('class', 'tooltip')
         // .append('button')
         // .attr("type","button")
@@ -516,14 +505,27 @@ function popin() {
 }
 
 function popout() {
-    console.log('popout')
     // div.transition()
     //     .duration(100)
     //     .style('opacity', 0);
     if(popup)
         d3.select('#popup').remove();
 }
+var oldx;
+var oldy;
 
+function dragstarted() {
 
+     oldx = Math.abs((d3.select('#popup').select('svg').attr('x')) - d3.event.x);
+     oldy = Math.abs((d3.select('#popup').select('svg').attr('y')) - d3.event.y);
+}
+
+function dragged() {
+
+    d3.select('#popup')
+        .select('svg')
+        .attr('x', d3.event.x - oldx)
+        .attr('y', d3.event.y - oldy);
+}
 
 

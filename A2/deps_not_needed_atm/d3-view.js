@@ -3461,7 +3461,7 @@ var d3For = {
       });
 
     sel.selectAll(selector).each(function(d) {
-      // update model itemName property
+      // updatePopup model itemName property
       this.__d3_view__.model[itemName] = d;
     });
   }

@@ -21,12 +21,12 @@ svg {
 .tooltip {
     position: absolute;
     text-align: center;
-    width: 300px;
-    height: 200px;
+    width: 100px;
+    height: 17px;
     padding: 0px;
     font: 12px sans-serif;
     background: lightsteelblue;
     border: 0px;
-    /*border-radius: 30px;*/
-    pointer-events: auto;
+    border-radius: 10px;
+    pointer-events: none;
 }
