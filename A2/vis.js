@@ -1,7 +1,6 @@
 var cityNum = 8;
 
 var city_counter = new Array(cityNum).fill(0);
-var pinned = new Array(cityNum).fill(false);
 var context = [];
 
 var svgHeight = 700;
@@ -179,6 +178,7 @@ d3.text('urbana_crimes.csv', function(error, data) {
 
             for(let i = 0; i < data.length; ++i) {
                 data[i].counter = city_counter[i];
+                data[i].pinned = false;
             }
         // too expensive operation
         // cities.selectAll('circle')
@@ -245,7 +245,7 @@ d3.text('urbana_crimes.csv', function(error, data) {
             .style('fill', 'red')
             .on('mouseover', function (d, i) {
 
-                if (!pinned[i]) {
+                if (!d.pinned) {
                     d3.select(this)
                         .transition()
                         .duration(100)
@@ -282,7 +282,7 @@ d3.text('urbana_crimes.csv', function(error, data) {
                 tooltip.transition()
                     .duration(100)
                     .style('opacity', 0);
-                if (!pinned[i]) {
+                if (!d.pinned) {
                     d3.select(this)
                         .transition()
                         .attr('r', 15)
@@ -301,16 +301,16 @@ d3.text('urbana_crimes.csv', function(error, data) {
                 }
             })
             .on('click', function (d, i) {
-                pinned[i] = !pinned[i];
+                d.pinned = !d.pinned;
 
                 let newdata = [];
                 let j, k = 0;
-                for (j = 0; j < pinned.length; ++j) {
-                    if (pinned[j])
+                for (j = 0; j < data.length; ++j) {
+                    if (data[j].pinned)
                         newdata[k++] = data[j];
                 }
-                
-                if (pinned[i]) {
+
+                if (d.pinned) {
                     d3.select(this)
                         .transition()
                         .attr('r', 10)
@@ -348,7 +348,6 @@ d3.text('urbana_crimes.csv', function(error, data) {
                         .transition()
                         .attr('stroke-width', Math.log(data[i].counter + 1));
                     updatePopup(newdata);
-                    // popout();
                 }
             });
 
