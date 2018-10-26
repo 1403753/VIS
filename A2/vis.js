@@ -129,8 +129,8 @@ d3.text('urbana_crimes.csv', function(error, data) {
             d.context[0] = +d.context[0]; // latitude
             d.context[1] = +d.context[1]; // longitude
             d.context[2] = d['ARRESTEE HOME CITY']; // city
-            d.context[3] = d['CRIME CODE DESCRIPTION']; // crime
-            d.context[4] = d['YEAR OF ARREST']; //year
+            d.context[3] = d['AGE AT ARREST']; // age
+            d.context[4] = d['YEAR OF ARREST']; // year
         }
         return d.context;
     });
@@ -139,7 +139,7 @@ d3.text('urbana_crimes.csv', function(error, data) {
     context = context.filter(function (d) {
         if (!d) return false;
 
-        if (d.length !== 5) {
+        if (d.length !== 6) {
             return false;
         }
 
@@ -168,22 +168,6 @@ d3.text('urbana_crimes.csv', function(error, data) {
 
         return true;
     });
-
-
-    // // add criminal locations TOO SLOW
-    // svg.selectAll('circle')
-    //     .data(context)
-    //     .enter().append('circle')
-    //     .attr('r', 1)
-    //     .attr('fill', 'ghostwhite')
-    //     .attr('transform', function (d) {
-    //         return 'translate(' + projection([
-    //             d[1],
-    //             d[0]
-    //         ]) + ')';
-    //     });
-
-
 
     cities = svg.append('g');
     // legend = svg.append('g');
@@ -220,7 +204,7 @@ d3.text('urbana_crimes.csv', function(error, data) {
         data.forEach(function (d, i) {
             d.years = city_counter[i];
             for (let y = 0; y < d.years.length; ++y) {
-                d. years[y] = +d.years[y];
+                d.years[y] = +d.years[y];
             }
             d.counter = d3.sum(city_counter[i], function() {
                 return 1;
@@ -230,24 +214,24 @@ d3.text('urbana_crimes.csv', function(error, data) {
 
         // var yh = d3.scaleLinear()
         //     .range([svgHeight / 2, 0]);
-
-        var yearlimits = d3.extent(context, function (d) {
-            return d[4];
-        });
-
-        var xh = d3.scaleTime()
-            .domain(yearlimits)
+        
+        var xh = d3.scaleLinear()
+            .domain([0, 8])
             .rangeRound([0, svgWidth / 2 - 40]);
 
         var histogram = d3.histogram()
                 .domain(xh.domain())
                 .thresholds(xh.ticks(8))
-                .value(function(d, i) { return d.years[i]; });
+                .value(function(d) {
+                    return d[2]; //cityname
+                });
 
 
-        var bins = histogram(data);
+        var bins = histogram(context);
 
         console.log(bins);
+
+
 
         cities.selectAll('line')
             .data(data)
