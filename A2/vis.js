@@ -31,8 +31,8 @@ var svg = body
 var histoView = body
     .append('div')
     .style('margin-top', 10 + 'px')
-    // .style('margin-right', 5 + 'px')
     .append('svg')
+    .attr('id', 'tpsreports')
     .attr('height', svgHeight)
     .attr('width', svgWidth / 2)
     .style('outline', 'thin solid black');
@@ -47,10 +47,9 @@ defs.append('pattern')
     .append('image')
     .attr('preserveAspectRatio', 'none')
     .attr('xlink:href', 'pcloadletter.jpeg')
-    .attr('width', 1)
+    .attr('width', 1);
 
 histoView.append('rect')
-    .attr('id', 'tpsreports')
     .attr('width', svgWidth / 2)
     .attr('height', svgHeight)
     .style('fill', 'url(#pcloadletter)')
@@ -139,7 +138,7 @@ d3.text('urbana_crimes.csv', function(error, data) {
     context = context.filter(function (d) {
         if (!d) return false;
 
-        if (d.length !== 6) {
+        if (d.length !== 5) {
             return false;
         }
 
@@ -214,7 +213,7 @@ d3.text('urbana_crimes.csv', function(error, data) {
 
         // var yh = d3.scaleLinear()
         //     .range([svgHeight / 2, 0]);
-        
+
         var xh = d3.scaleLinear()
             .domain([0, 8])
             .rangeRound([0, svgWidth / 2 - 40]);
@@ -350,7 +349,7 @@ d3.text('urbana_crimes.csv', function(error, data) {
                 data.forEach(function (d) {
                     if (d.pinned)
                         newdata.push(d);
-                })
+                });
 
                 if (d.pinned) {
                     d3.select(this)
@@ -576,7 +575,7 @@ d3.text('urbana_crimes.csv', function(error, data) {
                             .transition()
                             .attr('stroke-width', 0);
                     }
-                })
+                });
 
                 let newdata = [];
 
@@ -648,5 +647,37 @@ d3.text('urbana_crimes.csv', function(error, data) {
 
             }
         }
+
+        var yearMax = d3.max(context, function (d) {
+            return d[4];
+        });
+
+        var yearRange = 10;
+
+        var data3 = d3.range(0, yearRange).map(function (d) { return new Date(+yearMax - yearRange + 1 + d, 1, 1); });
+
+        var slider3 = d3.sliderHorizontal()
+            .min(d3.min(data3))
+            .max(d3.max(data3))
+            .step(1000 * 60 * 60 * 24 * 365)
+            .width(400)
+            .tickFormat(d3.timeFormat('%Y'))
+            .tickValues(data3)
+            .on('onchange', val => {
+                d3.select("p#value3").text(d3.timeFormat('%Y')(val));
+            });
+
+        var group3 = d3.select("#tpsreports").append("svg")
+            .attr("width", 500)
+            .attr("height", 100)
+            .attr('y', 300)
+            .append("g")
+            .attr("transform", "translate(30,30)");
+
+        group3.call(slider3);
+
+        d3.select("p#value3").text(d3.timeFormat('%Y')(slider3.value()));
+        d3.select("a#setValue3").on("click", () => { slider3.value(new Date(1997, 1, 1)); d3.event.preventDefault(); });
+
     });
 }); // end d3.text
