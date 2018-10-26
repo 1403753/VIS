@@ -1,5 +1,6 @@
-svg {
+.map {
     background-color: lightblue;
+    outline: thin solid black;
 }
 
 .graticule {
@@ -18,11 +19,15 @@ svg {
     stroke-width: 0.5px;
 }
 
+.popup {
+    fill: red;
+}
+
 .tooltip {
     position: absolute;
     text-align: center;
     width: 100px;
-    height: 17px;
+    height: 51px;
     padding: 0px;
     font: 12px sans-serif;
     background: lightsteelblue;
@@ -32,7 +37,7 @@ svg {
 }
 
 
-rect.selection {
+.selection {
     stroke          : grey;
     stroke-dasharray: 4px;
     stroke-opacity  : 1;

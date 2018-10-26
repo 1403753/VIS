@@ -8,11 +8,32 @@ var svgWidth = 950;
 
 var cities;
 // var legend;
+var body = d3.select('body')
+    .append('div')
+    .style('width', 3*svgWidth / 2 + 30 + 'px')
+    .style('height', svgHeight + 30 + 'px')
+    .style('overflow', 'hidden');
 
-var svg = d3.select('body')
+
+var svg = body
+    .append('div')
+    .style('width', svgWidth + 20 + 'px')
+    .style('height', svgHeight + 20 + 'px')
+    .style('float', 'left')
+    .style('padding-left', 10 + 'px')
+    .style('padding-top', 10 + 'px')
     .append('svg')
     .attr('height', svgHeight)
     .attr('width', svgWidth)
+    .attr('class', 'map');
+
+
+var histogram = body
+    .append('div')
+    .style('margin-top', 10 + 'px')
+    .append('svg')
+    .attr('height', svgHeight / 2)
+    .attr('width', svgWidth / 2)
     .attr('style', 'outline: thin solid black;');
 
 var projection = d3.geoMercator()
@@ -28,6 +49,7 @@ svg.append('path')
     .datum(graticule)
     .attr('class', 'graticule')
     .attr('d', path);
+
 
 
 
@@ -233,6 +255,8 @@ d3.text('urbana_crimes.csv', function(error, data) {
                 ])[1]
             );
 
+        var mouseOnCity = false;
+
         cities.selectAll('circle')
             .data(data)
             .enter()
@@ -249,7 +273,7 @@ d3.text('urbana_crimes.csv', function(error, data) {
             .style('stroke', 'black')
             .style('fill', 'red')
             .on('mouseover', function (d, i) {
-
+                mouseOnCity = true;
                 if (!d.pinned) {
                     d3.select(this)
                         .transition()
@@ -276,14 +300,15 @@ d3.text('urbana_crimes.csv', function(error, data) {
                         .duration(800)
                         .style('opacity', 0.9);
 
-                    tooltip.html('click to unpin')
-                        .style('left', (d3.event.pageX + 10) + 'px')
+                    tooltip.html('click to unpin or band select for multi unpinning')
+                        .style('left', (d3.event.pageX + 35) + 'px')
                         .style('top', (d3.event.pageY - 35) + 'px');
 
 
                 }
             })
             .on('mouseout', function (d, i) {
+                mouseOnCity = false;
                 tooltip.transition()
                     .duration(100)
                     .style('opacity', 0);
@@ -309,17 +334,16 @@ d3.text('urbana_crimes.csv', function(error, data) {
                 d.pinned = !d.pinned;
 
                 let newdata = [];
-                let j, k = 0;
-                for (j = 0; j < data.length; ++j) {
-                    if (data[j].pinned)
-                        newdata[k++] = data[j];
-                }
+                data.forEach(function (d) {
+                    if (d.pinned)
+                        newdata.push(d);
+                })
 
                 if (d.pinned) {
                     d3.select(this)
                         .transition()
                         .attr('r', 10)
-                        .style('fill', function (d) {
+                        .style('fill', function () {
                             return d.color;
                         })
                         .attr('stroke-width', 3)
@@ -333,12 +357,12 @@ d3.text('urbana_crimes.csv', function(error, data) {
                     popin(newdata);
 
                 } else {
-                    d3.select(this)
+                    d3.select('circle.centerCircle')
                         .transition()
                         .duration(100)
                         .attr('r', 15)
                         .attr('stroke-width', 1)
-                        .style('fill', function (d) {
+                        .style('fill', function () {
                             return d.color;
                         })
                         .style('opacity', .45);
@@ -351,11 +375,10 @@ d3.text('urbana_crimes.csv', function(error, data) {
 
                     d3.select('#line_' + i)
                         .transition()
-                        .attr('stroke-width', Math.log(data[i].counter + 1));
+                        .attr('stroke-width', Math.log(d.counter + 1));
                     updatePopup(newdata);
                 }
             });
-
 
 
         var popup;
@@ -393,6 +416,9 @@ d3.text('urbana_crimes.csv', function(error, data) {
         }
 
 
+
+
+
         function drawTable(data) {
 
         }
@@ -408,17 +434,37 @@ d3.text('urbana_crimes.csv', function(error, data) {
                 .attr('x', 620)
                 .attr('y', 420);
 
+            var defs = popup.append('svg:defs');
+
+            defs.append('svg:pattern')
+                .attr('id', 'pcloadletter')
+                .attr('patternContentUnits', 'objectBoundingBox')
+                .attr('width', '100%')
+                .attr('height', '100%')
+                .append('svg:image')
+                .attr('preserveAspectRatio', 'none')
+                .attr('xlink:href', 'pcloadletter.jpeg')
+                .attr('x', 0)
+                .attr('y', 0)
+                .attr('width', 1)
+                .attr('height', 1);
+
             popup.append('rect')
                 .attr('width', 300)
                 .attr('height', 200)
                 .style('fill', 'ghostwhite')
+                .style('opacity', 0.9)
                 .style('stroke', 'black');
+
+
 
             popup.append('text')
                 .text('<< close me, or drag me around!')
                 .attr('x', 25)
                 .attr('y', 15)
                 .style('fill', 'red');
+
+
 
             var close = popup.append('g');
 
@@ -485,10 +531,9 @@ d3.text('urbana_crimes.csv', function(error, data) {
 
 // the code for band selection below was inspired by http://bl.ocks.org/lgersman/5311083
 
-        svg.on('mousedown', mousedown)
-            .on('mousemove', mousemove)
-            .on('mouseup', mouseup);
-
+            svg.on('mousedown', mousedown)
+                .on('mousemove', mousemove)
+                .on('mouseup', mouseup);
 
         function mouseup(){
             if (holdStarter) {
@@ -499,7 +544,6 @@ d3.text('urbana_crimes.csv', function(error, data) {
                 holdActive = false;
                 let circlesToSelect = d3.selectAll('circle.centerCircle');
                 let selFr = d3.select('#selFr');
-
 
                 circlesToSelect.each(function (d, i) {
 
@@ -536,11 +580,12 @@ d3.text('urbana_crimes.csv', function(error, data) {
                 })
 
                 let newdata = [];
-                let j, k = 0;
-                for (j = 0; j < data.length; ++j) {
-                    if (data[j].pinned)
-                        newdata[k++] = data[j];
-                }
+
+
+                data.forEach(function (d) {
+                    if (d.pinned)
+                        newdata.push(d);
+                });
                 updatePopup(newdata);
 
 
@@ -549,23 +594,23 @@ d3.text('urbana_crimes.csv', function(error, data) {
         }
 
         function mousedown() {
+            if (!mouseOnCity) {
+                var m = d3.mouse(this);
 
-            var m = d3.mouse(this);
+                svg.append('rect')
+                    .attr('id', 'selFr')
+                    .attr('class', 'selection')
+                    .attr('x', m[0])
+                    .attr('y', m[1])
+                    .attr('height', 0)
+                    .attr('width', 0);
 
-            svg.append('rect')
-                .attr('id', 'selFr')
-                .attr('class', 'selection')
-                .attr('x', m[0])
-                .attr('y', m[1])
-                .attr('height', 0)
-                .attr('width', 0);
-
-            holdStarter = setTimeout(function() {
-                holdStarter = null;
-                holdActive = true;
-                // begin hold-only operation here, if desired
-            }, holdDelay);
-
+                holdStarter = setTimeout(function () {
+                    holdStarter = null;
+                    holdActive = true;
+                    // begin hold-only operation here, if desired
+                }, holdDelay);
+            }
         }
 
         function mousemove() {
@@ -602,11 +647,7 @@ d3.text('urbana_crimes.csv', function(error, data) {
                 selFr.attr('width', pos.width);
                 selFr.attr('height', pos.height);
 
-
-
             }
         }
-
-
     });
 }); // end d3.text
