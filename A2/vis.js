@@ -27,8 +27,8 @@ var svg = body
     .attr('width', svgWidth)
     .attr('class', 'map');
 
-// setup histoView
-var histoView = body
+// setup tableView
+var tableView = body
     .append('div')
     .style('margin-top', 10 + 'px')
     .append('svg')
@@ -37,7 +37,7 @@ var histoView = body
     .attr('width', svgWidth / 2)
     .style('outline', 'thin solid black');
 
-var defs = histoView.append('defs');
+var defs = tableView.append('defs');
 
 defs.append('pattern')
     .attr('id', 'pcloadletter')
@@ -49,7 +49,7 @@ defs.append('pattern')
     .attr('xlink:href', 'pcloadletter.jpeg')
     .attr('width', 1);
 
-histoView.append('rect')
+tableView.append('rect')
     .attr('width', svgWidth / 2)
     .attr('height', svgHeight)
     .style('fill', 'url(#pcloadletter)')
@@ -219,11 +219,11 @@ d3.text('urbana_crimes.csv', function(error, data) {
             .rangeRound([0, svgWidth / 2 - 40]);
 
         var histogram = d3.histogram()
-                .domain(xh.domain())
-                .thresholds(xh.ticks(8))
-                .value(function(d) {
-                    return d[2]; //cityname
-                });
+            .domain(xh.domain())
+            .thresholds(xh.ticks(8))
+            .value(function(d) {
+                return d[2]; //cityname
+            });
 
 
         var bins = histogram(context);
@@ -389,6 +389,7 @@ d3.text('urbana_crimes.csv', function(error, data) {
                         .transition()
                         .attr('stroke-width', Math.log(d.counter + 1));
                     updatePopup(newdata);
+                    updateTable(newdata);
                 }
             });
 
@@ -428,10 +429,36 @@ d3.text('urbana_crimes.csv', function(error, data) {
         }
 
 
+        var printer = (['damn', 'it', 'feels', 'good', 'to', 'be', 'a', 'gangsta']);
 
 
+        function updateTable(data) {
 
-        function drawTable(data) {
+            var update = tableView.selectAll('#gangsterdata')
+                .data(data);
+
+            update.enter()
+                .append('text')
+                .attr('id', 'gangsterdata')
+                .attr('x', 0)
+                .attr('y', function (d, i) {
+                    return i * 20 + 50;
+                })
+                .attr('dx', 17)
+                .attr('dy', 10)
+                .style('fill', 'orange')
+                .attr('text-anchor', 'start')
+                .attr('font-family', 'sans-serif')
+                .text(function (d) {
+                    return printer[d.id];
+                });
+
+            update.text(function (d) {
+                return printer[d.id];
+            });
+
+            update.exit()
+                .remove();
 
         }
 
@@ -499,6 +526,7 @@ d3.text('urbana_crimes.csv', function(error, data) {
                 .on('drag', dragged));
 
             updatePopup(data);
+            updateTable(data);
         }
 
         function popout() {
@@ -585,6 +613,7 @@ d3.text('urbana_crimes.csv', function(error, data) {
                         newdata.push(d);
                 });
                 updatePopup(newdata);
+                updateTable(newdata);
 
 
             }
@@ -654,15 +683,15 @@ d3.text('urbana_crimes.csv', function(error, data) {
 
         var yearRange = 10;
 
-        var data3 = d3.range(0, yearRange).map(function (d) { return new Date(+yearMax - yearRange + 1 + d, 1, 1); });
+        var years = d3.range(0, yearRange).map(function (d) { return new Date(+yearMax - yearRange + 1 + d, 1, 1); });
 
         var slider3 = d3.sliderHorizontal()
-            .min(d3.min(data3))
-            .max(d3.max(data3))
+            .min(d3.min(years))
+            .max(d3.max(years))
             .step(1000 * 60 * 60 * 24 * 365)
             .width(400)
             .tickFormat(d3.timeFormat('%Y'))
-            .tickValues(data3)
+            .tickValues(years)
             .on('onchange', val => {
                 d3.select("p#value3").text(d3.timeFormat('%Y')(val));
             });
