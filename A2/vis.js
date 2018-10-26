@@ -3,14 +3,14 @@ var cityNum = 8;
 var city_counter = new Array(cityNum).fill(0).map(() => new Array(0));
 var context = [];
 
-var svgHeight = 700;
+var svgHeight = 600;
 var svgWidth = 950;
 
 var cities;
 // var legend;
 var body = d3.select('body')
     .append('div')
-    .style('width', 3*svgWidth / 2 + 30 + 'px')
+    .style('width', 3* svgWidth / 2 + 80 + 'px')
     .style('height', svgHeight + 30 + 'px')
     .style('overflow', 'hidden');
 
@@ -27,18 +27,40 @@ var svg = body
     .attr('width', svgWidth)
     .attr('class', 'map');
 
-
-var histogram = body
+// setup histoView
+var histoView = body
     .append('div')
     .style('margin-top', 10 + 'px')
+    // .style('margin-right', 5 + 'px')
     .append('svg')
-    .attr('height', svgHeight / 2)
+    .attr('height', svgHeight)
     .attr('width', svgWidth / 2)
-    .attr('style', 'outline: thin solid black;');
+    .style('outline', 'thin solid black');
+
+var defs = histoView.append('defs');
+
+defs.append('pattern')
+    .attr('id', 'pcloadletter')
+    .attr('patternContentUnits', 'objectBoundingBox')
+    .attr('width', '100%')
+    .attr('height', '100%')
+    .append('image')
+    .attr('preserveAspectRatio', 'none')
+    .attr('xlink:href', 'pcloadletter.jpeg')
+    .attr('width', 1)
+
+histoView.append('rect')
+    .attr('id', 'tpsreports')
+    .attr('width', svgWidth / 2)
+    .attr('height', svgHeight)
+    .style('fill', 'url(#pcloadletter)')
+    .style('opacity', 0.9)
+    .style('stroke', 'black');
+
 
 var projection = d3.geoMercator()
     .scale(1300)
-    .translate([svgWidth / .410, svgHeight / .56]);
+    .translate([svgWidth / .410, svgHeight / .50]);
 
 var path = d3.geoPath()
     .projection(projection);
@@ -49,10 +71,6 @@ svg.append('path')
     .datum(graticule)
     .attr('class', 'graticule')
     .attr('d', path);
-
-
-
-
 
 // load background map
 d3.json('50m.json', function (d) {
@@ -84,11 +102,11 @@ d3.json('50m.json', function (d) {
         .domain([0, ydist]);
 
     svg.append('g')
-        .attr('transform', 'translate(0,' + 650 + ')')
+        .attr('transform', 'translate(' + 0 + ',' + svgHeight * .917 + ')')
         .call(d3.axisBottom(x_scale));
 
     svg.append('g')
-        .attr('transform', 'translate(' + 50 + ',' + -50 + ')')
+        .attr('transform', 'translate(' + svgWidth * .0525 + ',' + -50 + ')')
         .call(d3.axisLeft(y_scale));
 
     svg.append('text')
@@ -165,9 +183,7 @@ d3.text('urbana_crimes.csv', function(error, data) {
     //         ]) + ')';
     //     });
 
-    // console.log(d3.extent(context, function (d) {
-    //     return d[4];
-    // }));
+
 
     cities = svg.append('g');
     // legend = svg.append('g');
@@ -201,24 +217,37 @@ d3.text('urbana_crimes.csv', function(error, data) {
             })
             .style('opacity', 0);
 
-        for(let i = 0; i < data.length; ++i) {
-            data[i].counter = d3.sum(city_counter[i], function(d) {
+        data.forEach(function (d, i) {
+            d.years = city_counter[i];
+            for (let y = 0; y < d.years.length; ++y) {
+                d. years[y] = +d.years[y];
+            }
+            d.counter = d3.sum(city_counter[i], function() {
                 return 1;
             });
-            data[i].pinned = false;
-        }
-        // too expensive operation
-        // cities.selectAll('circle')
-        //     .data(data)
-        //     .enter()
-        //     .append('circle')
-        //     .attr('class', 'growCircle')
-        //     .attr('cx', function (d) {
-        //         return projection([d.longitude, d.latitude])[0];
-        //     })
-        //     .attr('cy', function (d) {
-        //         return projection([d.longitude, d.latitude])[1];
-        //     });
+            d.pinned = false;
+        });
+
+        // var yh = d3.scaleLinear()
+        //     .range([svgHeight / 2, 0]);
+
+        var yearlimits = d3.extent(context, function (d) {
+            return d[4];
+        });
+
+        var xh = d3.scaleTime()
+            .domain(yearlimits)
+            .rangeRound([0, svgWidth / 2 - 40]);
+
+        var histogram = d3.histogram()
+                .domain(xh.domain())
+                .thresholds(xh.ticks(8))
+                .value(function(d, i) { return d.years[i]; });
+
+
+        var bins = histogram(data);
+
+        console.log(bins);
 
         cities.selectAll('line')
             .data(data)
@@ -300,7 +329,7 @@ d3.text('urbana_crimes.csv', function(error, data) {
                         .duration(800)
                         .style('opacity', 0.9);
 
-                    tooltip.html('click to unpin or band select for multi unpinning')
+                    tooltip.html('click to unpin or mousedrag a selection frame for multi unpinning')
                         .style('left', (d3.event.pageX + 35) + 'px')
                         .style('top', (d3.event.pageY - 35) + 'px');
 
@@ -357,7 +386,7 @@ d3.text('urbana_crimes.csv', function(error, data) {
                     popin(newdata);
 
                 } else {
-                    d3.select('circle.centerCircle')
+                    d3.select(this)
                         .transition()
                         .duration(100)
                         .attr('r', 15)
@@ -431,23 +460,9 @@ d3.text('urbana_crimes.csv', function(error, data) {
                 .append('svg')
                 .attr('height', 200)
                 .attr('width', 300)
-                .attr('x', 620)
-                .attr('y', 420);
+                .attr('x', svgWidth * .65)
+                .attr('y', svgHeight * .55);
 
-            var defs = popup.append('svg:defs');
-
-            defs.append('svg:pattern')
-                .attr('id', 'pcloadletter')
-                .attr('patternContentUnits', 'objectBoundingBox')
-                .attr('width', '100%')
-                .attr('height', '100%')
-                .append('svg:image')
-                .attr('preserveAspectRatio', 'none')
-                .attr('xlink:href', 'pcloadletter.jpeg')
-                .attr('x', 0)
-                .attr('y', 0)
-                .attr('width', 1)
-                .attr('height', 1);
 
             popup.append('rect')
                 .attr('width', 300)
@@ -526,14 +541,14 @@ d3.text('urbana_crimes.csv', function(error, data) {
         }
 
         var holdStarter = null;
-        var holdDelay = 500;
+        var holdDelay = 200;
         var holdActive = false;
 
 // the code for band selection below was inspired by http://bl.ocks.org/lgersman/5311083
 
-            svg.on('mousedown', mousedown)
-                .on('mousemove', mousemove)
-                .on('mouseup', mouseup);
+        svg.on('mousedown', mousedown)
+            .on('mousemove', mousemove)
+            .on('mouseup', mouseup);
 
         function mouseup(){
             if (holdStarter) {
