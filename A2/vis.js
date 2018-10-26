@@ -1,6 +1,6 @@
 var cityNum = 8;
 
-var city_counter = new Array(cityNum).fill(0);
+var city_counter = new Array(cityNum).fill(0).map(() => new Array(0));
 var context = [];
 
 var svgHeight = 700;
@@ -85,20 +85,21 @@ d3.text('urbana_crimes.csv', function(error, data) {
         // map data (location, city, type of crime)
         var point = d['ARRESTEE HOME CITY - MAPPED'].split(/[(]/).slice(1);
         if (point.length) {
-            d.point = point.toString().match(/[+-]?\d+(?:\.\d+)?/g);
-            d.point[0] = +d.point[0]; // latitude
-            d.point[1] = +d.point[1]; // longitude
-            d.point[2] = d['ARRESTEE HOME CITY']; // city
-            d.point[3] = d['CRIME CODE DESCRIPTION']; // crime
+            d.context = point.toString().match(/[+-]?\d+(?:\.\d+)?/g);
+            d.context[0] = +d.context[0]; // latitude
+            d.context[1] = +d.context[1]; // longitude
+            d.context[2] = d['ARRESTEE HOME CITY']; // city
+            d.context[3] = d['CRIME CODE DESCRIPTION']; // crime
+            d.context[4] = d['YEAR OF ARREST']; //year
         }
-        return d.point;
+        return d.context;
     });
 
     // filter data
     context = context.filter(function (d) {
         if (!d) return false;
 
-        if (d.length !== 4) {
+        if (d.length !== 5) {
             return false;
         }
 
@@ -108,21 +109,21 @@ d3.text('urbana_crimes.csv', function(error, data) {
 
         // count criminals per city
         if (d[2].includes('URBANA')) {
-            city_counter[0]++;
+            city_counter[0].push(d[4]);
         } else if (d[2].includes('CHICAGO')) {
-            city_counter[1]++;
+            city_counter[1].push(d[4]);
         } else if (d[2].includes('JACKSONVILLE')) {
-            city_counter[2]++;
+            city_counter[2].push(d[4]);
         } else if (d[2].includes('WASHINGTON')) {
-            city_counter[3]++;
+            city_counter[3].push(d[4]);
         } else if (d[2].includes('KANSAS')) {
-            city_counter[4]++;
+            city_counter[4].push(d[4]);
         } else if (d[2].includes('NASHVILLE')) {
-            city_counter[5]++;
+            city_counter[5].push(d[4]);
         } else if (d[2].includes('ATLANTA')) {
-            city_counter[6]++;
+            city_counter[6].push(d[4]);
         } else if (d[2].includes('MINNEAPOLIS')) {
-            city_counter[7]++;
+            city_counter[7].push(d[4]);
         }
 
         return true;
@@ -142,7 +143,9 @@ d3.text('urbana_crimes.csv', function(error, data) {
     //         ]) + ')';
     //     });
 
-
+    // console.log(d3.extent(context, function (d) {
+    //     return d[4];
+    // }));
 
     cities = svg.append('g');
     // legend = svg.append('g');
@@ -176,10 +179,12 @@ d3.text('urbana_crimes.csv', function(error, data) {
             })
             .style('opacity', 0);
 
-            for(let i = 0; i < data.length; ++i) {
-                data[i].counter = city_counter[i];
-                data[i].pinned = false;
-            }
+        for(let i = 0; i < data.length; ++i) {
+            data[i].counter = d3.sum(city_counter[i], function(d) {
+                return 1;
+            });
+            data[i].pinned = false;
+        }
         // too expensive operation
         // cities.selectAll('circle')
         //     .data(data)
@@ -353,178 +358,255 @@ d3.text('urbana_crimes.csv', function(error, data) {
 
 
 
-        // legend.selectAll('rect')
-        //     .data(data)
-        //     .enter()
-        //     .append('rect')
-        //     .attr('id', 'rect-points')
-        //     .attr('x', 8.5 * svgWidth / 10)
-        //     .attr('y', function (d, i) {
-        //         return 6 * svgHeight / 10 + i * 20;
-        //     })
-        //     .attr('width', 10)
-        //     .attr('height', 10)
-        //     .style('fill', function (d) {
-        //         return d.color;
-        //     });
-        //
-        // legend.selectAll('text')
-        //     .data(data)
-        //     .enter()
-        //     .append('text')
-        //     .attr('x', 8.5 * svgWidth / 10)
-        //     .attr('y', function (d, i) {
-        //         return 6 * svgHeight / 10 + i * 20;
-        //     })
-        //     .attr('dx', 17)
-        //     .attr('dy', 10)
-        //     .style('fill', 'black')
-        //     .attr('text-anchor', 'start')
-        //     .attr('font-family', 'sans-serif')
-        //     .text(function (d, i) {
-        //         return d.city + ': ' + d.counter;
-        //     });
+        var popup;
+
+        function updatePopup(data) {
+            if (popup != null) {
+                var update = popup.selectAll('#textdata')
+                    .data(data, function (d) {
+                        return d;
+                    });
+
+                update.enter()
+                    .append('text')
+                    .attr('id', 'textdata')
+                    .attr('x', 0)
+                    .attr('y', function (d, i) {
+                        return i * 20 + 30;
+                    })
+                    .attr('dx', 17)
+                    .attr('dy', 10)
+                    .style('fill', 'black')
+                    .attr('text-anchor', 'start')
+                    .attr('font-family', 'sans-serif')
+                    .text(function (d) {
+                        return d.city + ': ' + d.counter;
+                    });
+
+                update.text(function (d) {
+                    return d.city + ': ' + d.counter;
+                });
+
+                update.exit()
+                    .remove();
+            }
+        }
+
+
+        function drawTable(data) {
+
+        }
+
+        function popin(data) {
+            popout();
+            popup = d3.select('svg')
+                .append('g')
+                .attr('id', 'popup')
+                .append('svg')
+                .attr('height', 200)
+                .attr('width', 300)
+                .attr('x', 620)
+                .attr('y', 420);
+
+            popup.append('rect')
+                .attr('width', 300)
+                .attr('height', 200)
+                .style('fill', 'ghostwhite')
+                .style('stroke', 'black');
+
+            popup.append('text')
+                .text('<< close me, or drag me around!')
+                .attr('x', 25)
+                .attr('y', 15)
+                .style('fill', 'red');
+
+            var close = popup.append('g');
+
+            close.append('rect')
+                .attr('x', 3)
+                .attr('y', 3)
+                .attr('width', 20)
+                .attr('height', 20)
+                .style('stroke', 'black')
+                .style('fill', 'grey');
+
+            close.append('line')
+                .attr('id', 'closeline1')
+                .attr('x1', 6)
+                .attr('x2', 20)
+                .attr('y1', 6)
+                .attr('y2', 20)
+                .style('stroke', 'black');
+
+            close.append('line')
+                .attr('id', 'closeline2')
+                .attr('x1', 20)
+                .attr('x2', 6)
+                .attr('y1', 6)
+                .attr('y2', 20)
+                .style('stroke', 'black');
+
+            close.on('click', function () {
+                popout();
+            });
+
+            popup.call(d3.drag()
+                .on('start', dragstarted)
+                .on('drag', dragged));
+
+            updatePopup(data);
+        }
+
+        function popout() {
+            if(popup)
+                d3.select('#popup')
+                    .remove();
+        }
+        var oldx;
+        var oldy;
+
+        function dragstarted() {
+
+            oldx = Math.abs((d3.select('#popup').select('svg').attr('x')) - d3.event.x);
+            oldy = Math.abs((d3.select('#popup').select('svg').attr('y')) - d3.event.y);
+        }
+
+        function dragged() {
+
+            d3.select('#popup')
+                .select('svg')
+                .attr('x', d3.event.x - oldx)
+                .attr('y', d3.event.y - oldy);
+        }
+
+        var holdStarter = null;
+        var holdDelay = 500;
+        var holdActive = false;
+
+// the code for band selection below was inspired by http://bl.ocks.org/lgersman/5311083
+
+        svg.on('mousedown', mousedown)
+            .on('mousemove', mousemove)
+            .on('mouseup', mouseup);
+
+
+        function mouseup(){
+            if (holdStarter) {
+                clearTimeout(holdStarter);
+                d3.select('#selFr').remove();
+            }
+            else if (holdActive) {
+                holdActive = false;
+                let circlesToSelect = d3.selectAll('circle.centerCircle');
+                let selFr = d3.select('#selFr');
+
+
+                circlesToSelect.each(function (d, i) {
+
+                    let x = projection([d.longitude, d.latitude])[0];
+                    let y = projection([d.longitude, d.latitude])[1];
+                    let r = +selFr.attr('r');
+                    let sFx = +selFr.attr('x');
+                    let sFy = +selFr.attr('y');
+                    let sFwidth = +selFr.attr('width');
+                    let sFheight = +selFr.attr('height');
+
+
+                    if (x - r >= sFx && x + r <= sFx + sFwidth &&
+                        y - r >= sFy && y + r <= sFy + sFheight) {
+
+                        data[i].pinned = false;
+
+                        d3.select(this)
+                            .transition()
+                            .attr('r', 15)
+                            .style('fill', 'red')
+                            .attr('stroke-width', 3)
+                            .style('opacity', 1);
+
+                        d3.select('#label_' + i)
+                            .transition()
+                            .attr('dy', 0)
+                            .style('opacity', 0);
+
+                        d3.select('#line_' + i)
+                            .transition()
+                            .attr('stroke-width', 0);
+                    }
+                })
+
+                let newdata = [];
+                let j, k = 0;
+                for (j = 0; j < data.length; ++j) {
+                    if (data[j].pinned)
+                        newdata[k++] = data[j];
+                }
+                updatePopup(newdata);
+
+
+            }
+            d3.select('#selFr').remove();
+        }
+
+        function mousedown() {
+
+            var m = d3.mouse(this);
+
+            svg.append('rect')
+                .attr('id', 'selFr')
+                .attr('class', 'selection')
+                .attr('x', m[0])
+                .attr('y', m[1])
+                .attr('height', 0)
+                .attr('width', 0);
+
+            holdStarter = setTimeout(function() {
+                holdStarter = null;
+                holdActive = true;
+                // begin hold-only operation here, if desired
+            }, holdDelay);
+
+        }
+
+        function mousemove() {
+
+            let m = d3.mouse(this);
+            let selFr = d3.select('#selFr');
+            if (!selFr.empty()) {
+                let move = [2];
+                let pos = [4];
+                pos.x = +selFr.attr('x');
+                pos.y = +selFr.attr('y');
+                pos.width = +selFr.attr('width');
+                pos.height = +selFr.attr('height');
+
+                move.x = m[0] - pos.x;
+                move.y = m[1] - pos.y;
+
+                if( move.x < 1 || (move.x*2<pos.width)) {
+                    pos.x = m[0];
+                    pos.width -= move.x;
+                } else {
+                    pos.width = move.x;
+                }
+
+                if( move.y < 1 || (move.y*2<pos.height)) {
+                    pos.y = m[1];
+                    pos.height -= move.y;
+                } else {
+                    pos.height = move.y;
+                }
+
+                selFr.attr('x', pos.x);
+                selFr.attr('y', pos.y);
+                selFr.attr('width', pos.width);
+                selFr.attr('height', pos.height);
+
+
+
+            }
+        }
+
+
     });
 }); // end d3.text
-
-var popup;
-
-function updatePopup(data) {
-    var update = popup.selectAll('#textdata')
-        .data(data, function (d) {
-            return d;
-        });
-
-    update.enter()
-        .append('text')
-        .attr('id', 'textdata')
-        .attr('x', 0)
-        .attr('y', function (d, i) {
-            return i * 20 + 30;
-        })
-        .attr('dx', 17)
-        .attr('dy', 10)
-        .style('fill', 'black')
-        .attr('text-anchor', 'start')
-        .attr('font-family', 'sans-serif')
-        .text(function (d) {
-            return d.city + ': ' + d.counter;
-        });
-
-    update.text(function (d) {
-        return d.city + ': ' + d.counter;
-    });
-
-    update.exit()
-        .remove();
-}
-
-
-function drawTable(data) {
-
-}
-
-function popin(data) {
-    popout();
-    popup = d3.select('svg')
-        .append('g')
-        .attr('id', 'popup')
-        .append('svg')
-        .attr('height', 200)
-        .attr('width', 300)
-        .attr('x', 620)
-        .attr('y', 420);
-
-    popup.append('rect')
-        .attr('width', 300)
-        .attr('height', 200)
-        .style('fill', 'ghostwhite')
-        .style('stroke', 'black');
-
-    popup.append('text')
-        .text('<< close me, or drag me around!')
-        .attr('x', 25)
-        .attr('y', 15)
-        .style('fill', 'red');
-
-    var close = popup.append('g');
-
-    close.append('rect')
-        .attr('x', 3)
-        .attr('y', 3)
-        .attr('width', 20)
-        .attr('height', 20)
-        .style('stroke', 'black')
-        .style('fill', 'grey');
-
-    close.append('line')
-        .attr('id', 'closeline1')
-        .attr('x1', 6)
-        .attr('x2', 20)
-        .attr('y1', 6)
-        .attr('y2', 20)
-        .style('stroke', 'black');
-
-    close.append('line')
-        .attr('id', 'closeline2')
-        .attr('x1', 20)
-        .attr('x2', 6)
-        .attr('y1', 6)
-        .attr('y2', 20)
-        .style('stroke', 'black');
-
-    close.on('click', function () {
-        popout();
-    });
-
-    popup.call(d3.drag()
-        .on('start', dragstarted)
-        .on('drag', dragged));
-
-    updatePopup(data);
-
-
-    // .attr('style', 'outline: thin solid black;');
-        // .attr('class', 'tooltip')
-        // .append('button')
-        // .attr("type","button")
-        // .attr('onclick', 'popout()');
-
-    // div.append('rect')
-    //     .attr('x', 0)
-    //     .attr('y', 0)
-    //     .attr('width', 100)
-    //     .attr('height', 100)
-    //     .style('fill', 'green');
-
-
-    // popup.html('crimes: ' + d.counter)
-    //     .style('left', (d3.event.pageX) + 'px')
-    //     .style('top', (d3.event.pageY) + 'px');
-}
-
-function popout() {
-    // div.transition()
-    //     .duration(100)
-    //     .style('opacity', 0);
-    if(popup)
-        d3.select('#popup').remove();
-}
-var oldx;
-var oldy;
-
-function dragstarted() {
-
-     oldx = Math.abs((d3.select('#popup').select('svg').attr('x')) - d3.event.x);
-     oldy = Math.abs((d3.select('#popup').select('svg').attr('y')) - d3.event.y);
-}
-
-function dragged() {
-
-    d3.select('#popup')
-        .select('svg')
-        .attr('x', d3.event.x - oldx)
-        .attr('y', d3.event.y - oldy);
-}
-
-

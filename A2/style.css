@@ -30,3 +30,11 @@ svg {
     border-radius: 10px;
     pointer-events: none;
 }
+
+
+rect.selection {
+    stroke          : grey;
+    stroke-dasharray: 4px;
+    stroke-opacity  : 1;
+    fill            : transparent;
+}
