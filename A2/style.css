@@ -29,6 +29,7 @@
 
 rect.bar {
     fill: steelblue;
+    stroke: blanchedalmond;
 }
 
 
@@ -36,11 +37,10 @@ rect.bar {
     position: absolute;
     text-align: center;
     width: 100px;
-    height: 55px;
-    padding: 0px;
+    height: 70px;
+    padding: 7px;
     font: 12px sans-serif;
     background: lightsteelblue;
-    border: 0px;
     border-radius: 10px;
     pointer-events: none;
 }

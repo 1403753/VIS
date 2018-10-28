@@ -1,12 +1,14 @@
-var cityNum = 8;
-
 var context = [];
 
 var svgHeight = 600;
 var svgWidth = 950;
-
+var popupHeight = 200;
+var popupWidth = 300;
+var histopadding = 10;
+var currentYear = 2007;
 var cities;
-// var legend;
+var strings = ['URBANA', 'CHICAGO', 'JACKSONVILLE', 'WASHINGTON', 'KANSAS', 'NASHVILLE', 'ATLANTA', 'MINNEAPOLIS'];
+
 var body = d3.select('body')
     .append('div')
     .style('width', 3* svgWidth / 2 + 80 + 'px')
@@ -150,14 +152,16 @@ d3.text('urbana_crimes.csv', function(error, data) {
             return false;
         }
 
-        return d[2].toUpperCase().includes('URBANA') ||
-            d[2].toUpperCase().includes('CHICAGO') ||
-            d[2].toUpperCase().includes('JACKSONVILLE') ||
-            d[2].toUpperCase().includes('WASHINGTON') ||
-            d[2].toUpperCase().includes('KANSAS') ||
-            d[2].toUpperCase().includes('NASHVILLE') ||
-            d[2].toUpperCase().includes('ATLANTA') ||
-            d[2].toUpperCase().includes('MINNEAPOLIS');
+        let changed = false;
+
+        strings.forEach(function (s) {
+            if (d[2].toUpperCase().includes(s)) {
+                d[2] = s;
+                changed = true;
+            }
+        });
+
+        return changed;
 
     });
 
@@ -169,7 +173,6 @@ d3.text('urbana_crimes.csv', function(error, data) {
                 return 1;
             });
         }).entries(context);
-
 
     cities = svg.append('g');
 
@@ -207,8 +210,6 @@ d3.text('urbana_crimes.csv', function(error, data) {
             d.counter = cityCounter[i].value;
             d.pinned = false;
         });
-
-
 
         cities.selectAll('line')
             .data(data)
@@ -290,7 +291,7 @@ d3.text('urbana_crimes.csv', function(error, data) {
                         .duration(800)
                         .style('opacity', 0.9);
 
-                    tooltip.html('click to unpin or mousedrag a selection frame for multi unpinning')
+                    tooltip.html('click to unpin or drag a selection frame over pinned cities for multi unpinning')
                         .style('left', (d3.event.pageX + 35) + 'px')
                         .style('top', (d3.event.pageY - 35) + 'px');
 
@@ -344,8 +345,8 @@ d3.text('urbana_crimes.csv', function(error, data) {
                         .attr('dy', 10 * (data[0].latitude <= d.latitude ? -2 : 2.5))
                         .style('opacity', 0.2);
 
-                    popin(newdata);
-
+                    popin();
+                    updateTable(newdata);
                 } else {
                     d3.select(this)
                         .transition()
@@ -366,16 +367,15 @@ d3.text('urbana_crimes.csv', function(error, data) {
                     d3.select('#line_' + i)
                         .transition()
                         .attr('stroke-width', Math.log(d.counter + 1));
+                    popin();
                     updateTable(newdata);
                 }
             });
 
+        var popup;
 
-        function popin(data) {
+        function popin() {
             popout();
-
-            let popupHeight = 200;
-            let popupWidth = 300;
 
             popup = d3.select('svg')
                 .append('g')
@@ -389,12 +389,12 @@ d3.text('urbana_crimes.csv', function(error, data) {
                 .attr('x', 5*10);
 
             popup.append('text')
-                .text('AGE')
-                .attr('x', 300)
+                .text('AGE AT ARREST (drag me around!)')
+                .attr('x', 100)
                 .attr('y', 30)
                 .style('fill', 'red');
 
-            var close = popup.append('g');
+            let close = popup.append('g');
 
             close.append('rect')
                 .attr('x', 3)
@@ -437,7 +437,6 @@ d3.text('urbana_crimes.csv', function(error, data) {
                     .style('stroke', 'black');
                 }
             ).on('click', function () {
-                d3.select(this)
                 popout();
             });
 
@@ -445,8 +444,74 @@ d3.text('urbana_crimes.csv', function(error, data) {
                 .on('start', dragstarted)
                 .on('drag', dragged));
 
-            updatePopup(context);
-            updateTable(data);
+            let newdata = yearFilter(context, currentYear);
+            newdata = cityFilter(data, newdata);
+
+            if (newdata.length !== 0) {
+
+                let [min, max] = d3.extent(newdata, function (d) {
+                    return d[3];
+                });
+
+                max += 1;
+
+                let threshold = d3.range(min, max, (max - min) / 20);
+                let yh = d3.scaleLinear()
+                    .range([popupHeight - histopadding / 2, histopadding]);
+
+                let xh = d3.scaleLinear()
+                    .domain([min, max])
+                    .rangeRound([histopadding, popupWidth - histopadding]);
+
+                let histogram = d3.histogram()
+                    .domain(xh.domain())
+                    .thresholds(threshold)
+                    .value(function (d) {
+                        return d[3]; // age
+                    });
+
+
+                let bins = histogram(newdata);
+
+                yh.domain([0, d3.max(bins, function (d) {
+                    return d.length;
+                })]);
+
+
+                popup.append('g')
+                    .attr('id', 'xh')
+                    .attr('transform', 'translate(' + 5 * histopadding + ',' + popupHeight + ')')
+                    .call(d3.axisBottom(xh));
+
+                popup.append('g')
+                    .attr('id', 'yh')
+                    .attr('transform', 'translate(' + (5 * histopadding - .6) + ',' + 0 + ')')
+                    .call(d3.axisLeft(yh));
+
+
+                popup.selectAll('#bar')
+                    .data(bins, function (d) {
+                        return d;
+                    })
+                    .enter()
+                    .append('rect')
+                    .attr('id', 'bar')
+                    .attr('class', 'bar')
+                    .attr('x', 5 * histopadding)
+                    .attr('y', -histopadding / 2)
+                    .attr('transform', function (d) {
+                        return "translate(" + xh(d.x0) + "," + yh(d.length) + ")";
+                    })
+                    .attr('width', function (d) {
+                        return xh(d.x1) - xh(d.x0);
+                    })
+                    .attr('height', function (d) {
+                        return popupHeight - yh(d.length);
+                    });
+            } else {
+                popout();
+            }
+
         }
 
         function popout() {
@@ -470,74 +535,6 @@ d3.text('urbana_crimes.csv', function(error, data) {
                 .attr('x', d3.event.x - oldx)
                 .attr('y', d3.event.y - oldy);
         }
-
-        var popup;
-
-        function updatePopup(data) {
-            if (popup != null) {
-                let popupHeight = 200;
-                let popupWidth = 300;
-                let histopadding = 10;
-
-                let ageLimits = d3.extent(data, function (d) {
-                    return d[3];
-                });
-                var yh = d3.scaleLinear()
-                    .range([popupHeight - histopadding/2, histopadding]);
-
-                var xh = d3.scaleLinear()
-                    .domain(ageLimits)
-                    .rangeRound([histopadding, popupWidth - histopadding]);
-
-
-                var histogram = d3.histogram()
-                    .domain(xh.domain())
-                    .thresholds(xh.ticks(10))
-                    .value(function(d) {
-                        return d[3]; // age
-                    });
-
-
-                var bins = histogram(data);
-
-                yh.domain([0, d3.max(bins, function(d) { return d.length; })]);
-
-                popup.append('g')
-                    .attr('transform', 'translate(' + 5*histopadding + ',' + popupHeight + ')')
-                    .call(d3.axisBottom(xh));
-
-                popup.append('g')
-                    .attr('transform', 'translate(' + (5*histopadding - .6) +  ',' + 0 + ')')
-                    .call(d3.axisLeft(yh));
-
-                var update = popup.selectAll('.bars')
-                    .data(bins, function (d) {
-                        return d;
-                    });
-
-                update.enter()
-                    .append('rect')
-                    .attr('class', 'bar')
-                    .attr('x', 5*histopadding)
-                    .attr('y', -histopadding/2)
-                    .attr('transform', function(d) {
-                        return "translate(" + xh(d.x0) + "," + yh(d.length) + ")"; })
-                    .attr('width', function(d) {
-                        return xh(d.x1) - xh(d.x0) - 2;
-                    })
-                    .attr('height', function(d) {
-                        return popupHeight - yh(d.length);
-                    });
-
-                update.attr('height', function(d) {
-                    return popupHeight - yh(d.length);
-                });
-
-                update.exit()
-                    .remove();
-            }
-        }
-
 
         var printer = (['Excuse', 'me,', 'I', 'believe', 'you', 'have', 'my', 'stapler.']);
 
@@ -634,7 +631,7 @@ d3.text('urbana_crimes.csv', function(error, data) {
                     if (d.pinned)
                         newdata.push(d);
                 });
-                // updatePopup(newdata);
+                popin();
                 updateTable(newdata);
 
 
@@ -707,34 +704,32 @@ d3.text('urbana_crimes.csv', function(error, data) {
 
         var years = d3.range(0, yearRange).map(function (d) { return new Date(+yearMax - yearRange + 1 + d, 1, 1); });
 
-        var slider3 = d3.sliderHorizontal()
+        var slider = d3.sliderHorizontal()
             .min(d3.min(years))
             .max(d3.max(years))
             .step(1000 * 60 * 60 * 24 * 365)
             .width(400)
             .tickFormat(d3.timeFormat('%Y'))
             .tickValues(years)
-            .on('onchange', val => {
-                d3.select("p#value3").text(d3.timeFormat('%Y')(val));
+            .on('onchange', function (d) {
+                currentYear = +d3.timeFormat('%Y')(d);
+                popin();
             });
 
-        var group3 = d3.select("#tpsreports").append("svg")
+        var sliderGroup = d3.select("#tpsreports").append("svg")
             .attr("width", 500)
             .attr("height", 100)
             .attr('y', 500)
             .append("g")
             .attr("transform", "translate(30,30)");
 
-        group3.call(slider3);
-
-        d3.select("p#value3").text(d3.timeFormat('%Y')(slider3.value()));
-        d3.select("a#setValue3").on("click", () => { slider3.value(new Date(1997, 1, 1)); d3.event.preventDefault(); });
+        sliderGroup.call(slider);
 
         function yearFilter(data, year) {
             return data.filter(function (d) {
                 return d[4] === year;
             });
-        };
+        }
 
         function cityFilter(data, context) {
 
@@ -747,9 +742,7 @@ d3.text('urbana_crimes.csv', function(error, data) {
             let filteredData = [];
             newdata.forEach(function (d) {
                 context.forEach(function (k) {
-                    console.log(d.city.toUpperCase(), k[2].toUpperCase());
                     if (k[2].toUpperCase().includes(d.city.toUpperCase())) {
-                        // console.log(k);
                         filteredData.push(k);
                     }
                 });
@@ -758,19 +751,81 @@ d3.text('urbana_crimes.csv', function(error, data) {
             return filteredData;
         }
 
-        //testcode:
-        // data[0].pinned = true;
-        // data[1].pinned = true;
-        // data[2].pinned = true;
-        // data[3].pinned = true;
-        // data[4].pinned = true;
-        // data[5].pinned = true;
+        // need to implement
+        // function updatePopup() {
+        //     if (popup != null) {
         //
-        // // console.log(data)
-        // var testdata = yearFilter(context, 2000);
-        // testdata = cityFilter(data, testdata);
-        // // console.log(testdata);
-        // console.log(testdata);
+        //         let newdata = yearFilter(context, currentYear);
+        //
+        //
+        //         newdata = cityFilter(data, newdata);
+        //         if (newdata.length !== 0) {
+        //             let ageLimits = d3.extent(newdata, function (d) {
+        //                 return d[3];
+        //             });
+        //
+        //             let yh = d3.scaleLinear()
+        //                 .range([popupHeight - histopadding / 2, histopadding]);
+        //
+        //             let xh = d3.scaleLinear()
+        //                 .domain(ageLimits)
+        //                 .rangeRound([histopadding, popupWidth - histopadding]);
+        //
+        //             let histogram = d3.histogram()
+        //                 .domain(xh.domain())
+        //                 .thresholds(xh.ticks(10))
+        //                 .value(function (d) {
+        //                     return d[3]; // age
+        //                 });
+        //
+        //             let bins = histogram(newdata);
+        //
+        //             yh.domain([0, d3.max(bins, function (d) {
+        //                 return d.length;
+        //             })]);
+        //
+        //
+        //             d3.select('#xh')
+        //                 .attr('transform', 'translate(' + 5 * histopadding + ',' + popupHeight + ')')
+        //                 .call(d3.axisBottom(xh));
+        //
+        //             d3.select('#yh')
+        //                 .attr('transform', 'translate(' + (5 * histopadding - .6) + ',' + 0 + ')')
+        //                 .call(d3.axisLeft(yh));
+        //
+        //             let update = popup.selectAll('#bar')
+        //                 .data(bins, function (d) {
+        //                     return d;
+        //                 });
+        //
+        //
+        //             update.enter()
+        //                 .attr('width', function (d) {
+        //                     return xh(d.x1) - xh(d.x0);
+        //                 })
+        //                 .attr('height', function (d) {
+        //                     return popupHeight - yh(d.length);
+        //                 });
+        //
+        //             update.attr('width', function (d) {
+        //                 return xh(d.x1) - xh(d.x0);
+        //             })
+        //                 .attr('height', function (d) {
+        //                     return popupHeight - yh(d.length);
+        //                 });
+        //
+        //             update.exit()
+        //                 .remove();
+        //         } else {
+        //             popup.selectAll('#bar')
+        //                 .attr('height', 0);
+        //         }
+        //
+        //     }
+        // }
+
 
     });
 }); // end d3.text
+
+
