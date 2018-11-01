@@ -1,7 +1,7 @@
 @title : VIS-A2 README
 @author: Robert Ernstbrunner
 @matnr.: 01403753
-@date  : 28.10.2018
+@date  : 30.10.2018
 
 
 
@@ -14,23 +14,22 @@ How I visualize the data:
 	On mouseover, a pinned city will yield a tooltip that explains how to unpin a single city
 	or multiple cities at once. Since the tooltip does such a good job, I will refrain from
 	explaining this here and just mention that I implemented some kind of 2D 'band-UNselection'
-	here (the implementation does not simplify for unselecting cities, I just wanted to explore 
-	my dyslexic side).
+	here (the complexity for band-unselecting cities is the same as for selecting them. I just
+	wanted to explore my dyslexic side.).
 
 - Additional table:
 	When a city is selected, a word and a number pop up on the right table with the stapler.
 	The word is a synonym for the selected city, and the number is the total ammount of crimes 
 	commited over the entire time period. This is where the enter/update/delete pattern comes
 	into play.
-	Just in case you're wondering about the stapler, it's an hommage to the film 'Office Space'. 
 
 - Popup histogram:
 	When selecting a city, most certainly a histogram will pop up. It will indicate the age of
 	the	criminals for the selected year, if and only if there was a crime from a citicen in that
 	specific year. Otherwise there will be no popup.
 	If multiple cities are selected, the histogram shows the accumulated data	for all	selected
-	cities in a specific year. The popup also incorporates draging and closing-on-demand
-	mechanisms but is strictly redrawn after every change (which simplifies things for now).
+	cities for a specific year. The popup also incorporates draging and closing-on-demand
+	mechanisms but is strictly reappended after every change (which simplifies things for now).
 
 - Scrubber for selecting the year:
 	The scrubber is located on the right table under my shiny red stapler. I chose a range
@@ -40,12 +39,30 @@ How I visualize the data:
 
 
 Why I visualize the data in that way:
-	I chose to select only 8 cities (nominal data) so I could have a nice color set. Also, the
-	implementation is faster the more stuff is filtered beforehand. In general I tried to stick
-	to conventions learned in class
 
+-	I chose to select only 8 cities (nominal data) so I could have a nice color set (I didn't
+	use a color-brewer and I didn't check for color-blindness though). Also the implementation
+	is faster if more stuff is filtered beforehand. I use a preprocessed CSV file for my
+	application now. I did this in order to speed up the loading process at the beginning. The
+	code for filtering and writing to CSV is comented out and appended to the 'vis.js' file.
+	Just in case you're wondering about the stapler and word encoding for cities on the right
+	table: it's an hommage to a movie that was mentioned in class. Also, it would have been
+	nice to draw a stacked multi-colored histogram for when multiple cities are selected, but 
+	I ran out of time and integer-stored money.
+
+
+
+Sources:
 	
-- Sources:
-	The code for the band selection was inspired by http://bl.ocks.org/lgersman/5311083
-	The code for the slider was inspired by https://bl.ocks.org/johnwalley/e1d256b81e51da68f7feb632a53c3518
-	The code for the histogram was inspired by https://bl.ocks.org/d3noob/96b74d0bd6d11427dd797892551a103c
+- The code for the band selection was inspired by
+	http://bl.ocks.org/lgersman/5311083
+	and
+	https://bl.ocks.org/romsson/568e166d702b4a464347
+	.
+-	The code for the slider was inspired by
+	https://bl.ocks.org/shashank2104/d7051d80e43098bf9a48e9b6d3e10e73
+	.
+-	The code for the histogram was inspired by
+	https://bl.ocks.org/d3noob/96b74d0bd6d11427dd797892551a103c
+	.
+-	(all pages last visited 28.10.2018)

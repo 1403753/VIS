@@ -1,0 +1,55 @@
+.map {
+    background-color: lightblue;
+    outline: thin solid black;
+}
+
+.graticule {
+    stroke: slategrey;
+    stroke-width: .5;
+    stroke-opacity: .5;
+}
+
+.land {
+    fill: blanchedalmond;
+}
+
+.boundary {
+    fill: none;
+    stroke: black;
+    stroke-width: 0.5px;
+}
+
+.popup {
+    width: 300px;
+    height: 200px;
+    fill: blanchedalmond;
+    opacity: 0.9;
+    stroke: black;
+}
+
+rect.bar {
+    fill: steelblue;
+    stroke: blanchedalmond;
+    opacity: 0.7;
+}
+
+
+.tooltip {
+    position: absolute;
+    text-align: center;
+    width: 100px;
+    height: 70px;
+    padding: 7px;
+    font: 12px sans-serif;
+    background: lightsteelblue;
+    border-radius: 10px;
+    pointer-events: none;
+}
+
+
+.selection {
+    stroke : grey;
+    stroke-dasharray : 4px;
+    stroke-opacity : 1;
+    fill : transparent;
+}

@@ -30,6 +30,7 @@
 rect.bar {
     fill: steelblue;
     stroke: blanchedalmond;
+    opacity: 0.7;
 }
 
 
@@ -47,8 +48,8 @@ rect.bar {
 
 
 .selection {
-    stroke          : grey;
-    stroke-dasharray: 4px;
-    stroke-opacity  : 1;
-    fill            : transparent;
+    stroke : grey;
+    stroke-dasharray : 4px;
+    stroke-opacity : 1;
+    fill : transparent;
 }

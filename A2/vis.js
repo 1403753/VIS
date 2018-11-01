@@ -7,7 +7,6 @@ var popupWidth = 300;
 var histopadding = 10;
 var currentYear = 2007;
 var cities;
-var strings = ['URBANA', 'CHICAGO', 'JACKSONVILLE', 'WASHINGTON', 'KANSAS', 'NASHVILLE', 'ATLANTA', 'MINNEAPOLIS'];
 
 var body = d3.select('body')
     .append('div')
@@ -110,59 +109,24 @@ d3.json('50m.json', function (d) {
         .call(d3.axisLeft(y_scale));
 
     svg.append('text')
-        .attr('x', 62)
-        .attr('y', 670)
+        .attr('transform', 'translate(' + 70 + ',' + (svgHeight - 30) + ')')
         .text('(miles)', 'sans-serif');
 });
 
-d3.text('urbana_crimes.csv', function(error, data) {
-// d3.text('urbana_crimes_medium.csv', function(error, data) {
-// d3.text('urbana_crimes_small.csv', function(error, data) {
+d3.text('urbana_reduced.csv', function(error, data) {
     if (error) throw error;
-    context = d3.csvParse(data).map(function (d) {
 
+    context = d3.csvParse(data, function (d) {
 
-        // map data (location, city, type of crime)
-        var point = d['ARRESTEE HOME CITY - MAPPED'].split(/[(]/).slice(1);
-        if (point.length) {
-            d.context = point.toString().match(/[+-]?\d+(?:\.\d+)?/g);
-            d.context[0] = +d.context[0]; // latitude
-            d.context[1] = +d.context[1]; // longitude
-            d.context[2] = d['ARRESTEE HOME CITY']; // city
-            d.context[3] = +d['AGE AT ARREST']; // age
-            d.context[4] = +d['YEAR OF ARREST']; // year
-            d.context[5] = d['CRIME CODE DESCRIPTION']; // crime
-        }
+        d.context = [6];
+        d.context[0] = +d['LATITUDE']; // latitude
+        d.context[1] = +d['LONGITUDE']; // longitude
+        d.context[2] = d['ARRESTEE HOME CITY']; // city
+        d.context[3] = +d['AGE AT ARREST']; // age
+        d.context[4] = +d['YEAR OF ARREST']; // year
+        d.context[5] = d['CRIME CODE DESCRIPTION']; // crime
+
         return d.context;
-    });
-
-    // filter data
-    context = context.filter(function (d) {
-        if (!d) return false;
-
-        if (d.length !== 6) {
-            return false;
-        }
-
-        if (isNaN(d[0]) || isNaN(d[1]) || d[0] < 20 || d[0] > 50 || d[1] < -110 || d[1] > -70) {
-            return false;
-        }
-
-        if (d[3] < 1 || d[3] > 120) {
-            return false;
-        }
-
-        let changed = false;
-
-        strings.forEach(function (s) {
-            if (d[2].toUpperCase().includes(s)) {
-                d[2] = s;
-                changed = true;
-            }
-        });
-
-        return changed;
-
     });
 
     var cityCounter = d3.nest()
@@ -382,16 +346,16 @@ d3.text('urbana_crimes.csv', function(error, data) {
                 .attr('id', 'popup')
                 .append('svg')
                 .attr('x', svgWidth - popupWidth - 60)
-                .attr('y', svgHeight - popupHeight - 80);
+                .attr('y', svgHeight - popupHeight - 100);
 
             popup.append('rect')
                 .attr('class', 'popup')
-                .attr('x', 5*10);
+                .attr('x', 5*histopadding);
 
             popup.append('text')
-                .text('AGE AT ARREST (drag me around!)')
-                .attr('x', 100)
-                .attr('y', 30)
+                .text('(<< close me!) ' + currentYear + ' (drag me around!)')
+                .attr('x', 57.5)
+                .attr('y', 15)
                 .style('fill', 'red');
 
             let close = popup.append('g');
@@ -440,9 +404,11 @@ d3.text('urbana_crimes.csv', function(error, data) {
                 popout();
             });
 
-            popup.call(d3.drag()
+            popup.call(
+                d3.drag()
                 .on('start', dragstarted)
-                .on('drag', dragged));
+                .on('drag', dragged)
+            );
 
             let newdata = yearFilter(context, currentYear);
             newdata = cityFilter(data, newdata);
@@ -483,10 +449,26 @@ d3.text('urbana_crimes.csv', function(error, data) {
                     .attr('transform', 'translate(' + 5 * histopadding + ',' + popupHeight + ')')
                     .call(d3.axisBottom(xh));
 
+                popup.append('text')
+                    .attr('x', (popupWidth + 5*histopadding) / 2 + 20)
+                    .attr('y',  popupHeight + 30)
+                    .style('text-anchor', 'middle')
+                    .text('Age');
+
+
                 popup.append('g')
                     .attr('id', 'yh')
                     .attr('transform', 'translate(' + (5 * histopadding - .6) + ',' + 0 + ')')
                     .call(d3.axisLeft(yh));
+
+                popup.append('text')
+                    .attr("transform", "rotate(-90)")
+                    .attr('x', -((popupHeight) / 2) )
+                    .attr('y', 2*histopadding - 3)
+                    .style('text-anchor', 'middle')
+                    .text('Population')
+
+                console.log(bins);
 
 
                 popup.selectAll('#bar')
@@ -526,6 +508,7 @@ d3.text('urbana_crimes.csv', function(error, data) {
 
             oldx = Math.abs((d3.select('#popup').select('svg').attr('x')) - d3.event.x);
             oldy = Math.abs((d3.select('#popup').select('svg').attr('y')) - d3.event.y);
+
         }
 
         function dragged() {
@@ -701,29 +684,77 @@ d3.text('urbana_crimes.csv', function(error, data) {
         });
 
         var yearRange = 10;
+        var range = [yearMax - yearRange, yearMax];
+        var years = d3.range(0, yearRange + 1).map(function (d) { return yearMax - yearRange + d; });
 
-        var years = d3.range(0, yearRange).map(function (d) { return new Date(+yearMax - yearRange + 1 + d, 1, 1); });
+        var slider = d3.select('#tpsreports').append('g')
+            .attr('id', 'slider')
+            .attr('transform', 'translate(' + 30 +', ' + (svgHeight * .92) + ')');
 
-        var slider = d3.sliderHorizontal()
-            .min(d3.min(years))
-            .max(d3.max(years))
-            .step(1000 * 60 * 60 * 24 * 365)
-            .width(400)
-            .tickFormat(d3.timeFormat('%Y'))
+        let xSliderScale = d3.scaleLinear()
+            .domain(range)
+            .range([0, svgWidth *.5 - 30 - 30])
+            .clamp(true); // use clamp to deal exceeding range limits
+
+        let xSliderAxis = d3.axisBottom(xSliderScale)
             .tickValues(years)
-            .on('onchange', function (d) {
-                currentYear = +d3.timeFormat('%Y')(d);
-                popin();
+            .tickFormat(function (d) {
+                return d;
             });
 
-        var sliderGroup = d3.select("#tpsreports").append("svg")
-            .attr("width", 500)
-            .attr("height", 100)
-            .attr('y', 500)
-            .append("g")
-            .attr("transform", "translate(30,30)");
+        // ticks
+        slider.append('g')
+            .attr('transform', 'translate(0, 4)')
+            .call(xSliderAxis);
 
-        sliderGroup.call(slider);
+        // red slider line
+        slider.append('line')
+            .attr('stroke', 'red')
+            .attr('stroke-width', 4)
+            .attr('stroke-linecap', 'round')
+            .attr('x1', xSliderScale.range()[0])
+            .attr('x2', xSliderScale.range()[1]);
+
+        // slider dot
+        slider.append('circle')
+            .attr('id','sliderDot')
+            .attr('r', 8)
+            .attr('stroke', 'black')
+            .attr('stroke-opacity', '0.2')
+            .attr('stroke-linecap', 'round')
+            .attr('stroke-width', 20 + 'px')
+            .call(d3.drag()
+                .on('start drag', function () {
+                    sliderDragged(d3.event.x);
+                })
+            );
+
+        function sliderDragged(xMouse) {
+            let x = xSliderScale.invert(xMouse);
+            let idx = null;
+            let middle;
+            let xPos;
+            let year;
+
+            for (let i = 0; i < years.length - 1; ++i) {
+                if (x >= years[i] && x <= years[i + 1]) {
+                    idx = i;
+                    break;
+                }
+            }
+
+            middle = (years[idx] + years[idx + 1]) * .5;
+            if (middle > x) {
+                xPos = xSliderScale(years[idx]);
+                year = years[idx];
+            } else {
+                xPos = xSliderScale(years[idx + 1]);
+                year = years[idx + 1];
+            }
+            currentYear = year;
+            d3.select('#sliderDot').attr('cx', xPos);
+            popin();
+        }
 
         function yearFilter(data, year) {
             return data.filter(function (d) {
@@ -751,7 +782,91 @@ d3.text('urbana_crimes.csv', function(error, data) {
             return filteredData;
         }
 
-        // need to implement
+        ////////////////////////////////////////////////////////
+        //  code for working with original urbana_crimes.csv  //
+        ////////////////////////////////////////////////////////
+
+        // var strings = ['URBANA', 'CHICAGO', 'JACKSONVILLE', 'WASHINGTON', 'KANSAS', 'NASHVILLE', 'ATLANTA', 'MINNEAPOLIS'];
+
+        // d3.text('urbana_crimes.csv', function(error, data) {
+        // d3.text('urbana_crimes_medium.csv', function(error, data) {
+        // d3.text('urbana_crimes_small.csv', function(error, data) {
+        //     if (error) throw error;
+        // context = d3.csvParse(data, function (d) {
+        //
+        //
+        //     // map data (location, city, type of crime)
+        //     var point = d['ARRESTEE HOME CITY - MAPPED'].split(/[(]/).slice(1);
+        //     if (point.length) {
+        //         d.context = point.toString().match(/[+-]?\d+(?:\.\d+)?/g);
+        //         d.context[0] = +d.context[0]; // latitude
+        //         d.context[1] = +d.context[1]; // longitude
+        //         d.context[2] = d['ARRESTEE HOME CITY']; // city
+        //         d.context[3] = +d['AGE AT ARREST']; // age
+        //         d.context[4] = +d['YEAR OF ARREST']; // year
+        //         d.context[5] = d['CRIME CODE DESCRIPTION']; // crime
+        //     }
+        //     return d.context;
+        // });
+        //
+        // // filter data
+        // context = context.filter(function (d) {
+        //     if (!d) return false;
+        //
+        //     if (d.length !== 6) {
+        //         return false;
+        //     }
+        //
+        //     if (isNaN(d[0]) || isNaN(d[1]) || d[0] < 20 || d[0] > 50 || d[1] < -110 || d[1] > -70) {
+        //         return false;
+        //     }
+        //
+        //     if (d[3] < 1 || d[3] > 120) {
+        //         return false;
+        //     }
+        //
+        //     let changed = false;
+        //
+        //     strings.forEach(function (s) {
+        //         if (d[2].toUpperCase().includes(s)) {
+        //             d[2] = s;
+        //             changed = true;
+        //         }
+        //     });
+        //
+        //     return changed;
+        //
+        // });
+
+        // store output
+        // var lineArray = [];
+        // context.forEach(function (p, i) {
+        //     var line = p.join(",");
+        //     lineArray.push(i == 0 ? 'LATITUDE,LONGITUDE,ARRESTEE HOME CITY,AGE AT ARREST,YEAR OF ARREST,CRIME CODE DESCRIPTION\n' : line);
+        // });
+        // var csvContent = lineArray.join("\n");
+        //
+        // var blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        // if (navigator.msSaveBlob) { // IE 10+
+        //     navigator.msSaveBlob(blob, 'AAA.csv');
+        // } else {
+        //     var link = document.createElement("a");
+        //     if (link.download !== undefined) { // feature detection
+        //         // Browsers that support HTML5 download attribute
+        //         var url = URL.createObjectURL(blob);
+        //         link.setAttribute("href", url);
+        //         link.setAttribute("download", 'AAA.csv');
+        //         link.style.visibility = 'hidden';
+        //         document.body.appendChild(link);
+        //         link.click();
+        //         document.body.removeChild(link);
+        //     }
+        // }
+
+        /////////////////////////////////////////
+        //  need to implement histogram update //
+        /////////////////////////////////////////
+
         // function updatePopup() {
         //     if (popup != null) {
         //
