@@ -346,13 +346,26 @@ d3.text('urbana_reduced.csv', function(error, data) {
         var popup = [];
         popup.open = false;
 
+        var [currentYear, yearMax] = d3.extent(context, function (d) {
+            return d[4];
+        });
+
+        var yearSpan = yearMax - currentYear < 17 ? yearMax - currentYear : 16;
+
+        currentYear = yearMax - yearSpan;
+
+        var range = [currentYear, yearMax];
+
+        var years = d3.range(0, yearSpan + 1).map(function (d) { return currentYear + d; });
+
         function popin() {
             popup = d3.select('svg')
                 .append('g')
                 .attr('id', 'popup')
                 .append('svg')
-                .attr('x', svgWidth - popupWidth - 60)
-                .attr('y', svgHeight - popupHeight - 100);
+                .attr('id', 'popupWindow')
+                .attr('x', svgWidth - popupWidth - 80)
+                .attr('y', svgHeight - popupHeight - 120);
 
             popup.open = true;
 
@@ -414,8 +427,8 @@ d3.text('urbana_reduced.csv', function(error, data) {
 
             popup.call(
                 d3.drag()
-                .on('start', dragstarted)
-                .on('drag', dragged)
+                .on('start', popupDragstarted)
+                .on('drag', popupDragged)
             );
 
             let ageRange = [5, 95];
@@ -481,11 +494,88 @@ d3.text('urbana_reduced.csv', function(error, data) {
                     return xh(d.x1) - xh(d.x0);
                 });
 
+            var slider = d3.select('#popupWindow').append('g')
+                .attr('id', 'slider')
+                .attr('transform', 'translate(' + 20 +', ' + (popupHeight + 40) + ')');
+            // .attr('transform', 'translate(' + 30 +', ' + (svgHeight * .92) + ')');
+
+            let xSliderScale = d3.scaleLinear()
+                .domain(range)
+                .range([0, popupWidth + 5*histopadding])
+                .clamp(true); // use clamp to deal with exceeding range limits
+
+            let xSliderAxis = d3.axisBottom(xSliderScale)
+                .tickValues(years)
+                .tickFormat(function (d) {
+                    return '\'' + d.toString().substr(-2);
+                });
+
+            // ticks
+            slider.append('g')
+                .attr('transform', 'translate(0, 4)')
+                .call(xSliderAxis);
+
+            // red slider line
+            slider.append('line')
+                .attr('stroke', 'red')
+                .attr('stroke-width', 4)
+                .attr('stroke-linecap', 'round')
+                .attr('x1', xSliderScale.range()[0])
+                .attr('x2', xSliderScale.range()[1]);
+
+            // slider dot
+            slider.append('circle')
+                .attr('id','sliderDot')
+                .attr('r', 8)
+                .attr('stroke', 'black')
+                .attr('stroke-opacity', '0.2')
+                .attr('stroke-linecap', 'round')
+                .attr('stroke-width', 20 + 'px')
+                .call(d3.drag()
+                    .on('start drag', function () {
+                        sliderDragged(d3.event.x);
+                    })
+                );
+
+            function sliderDragged(xMouse) {
+                let x = xSliderScale.invert(xMouse);
+                let idx = null;
+                let middle;
+                let xPos;
+                let year;
+
+                for (let i = 0; i < years.length - 1; ++i) {
+                    if (x >= years[i] && x <= years[i + 1]) {
+                        idx = i;
+                        break;
+                    }
+                }
+
+                middle = (years[idx] + years[idx + 1]) * .5;
+                if (middle > x) {
+                    xPos = xSliderScale(years[idx]);
+                    year = years[idx];
+                } else {
+                    xPos = xSliderScale(years[idx + 1]);
+                    year = years[idx + 1];
+                }
+                currentYear = year;
+                d3.select('#sliderDot').attr('cx', xPos);
+                updatePopup();
+            }
+
             updatePopup();
 
 
         }
 
+        function popout() {
+            if (popup) {
+                d3.select('#popup')
+                    .remove();
+                popup.open = false;
+            }
+        }
 
         function updatePopup() {
 
@@ -537,25 +627,17 @@ d3.text('urbana_reduced.csv', function(error, data) {
         }
 
 
-
-        function popout() {
-            if (popup) {
-                d3.select('#popup')
-                    .remove();
-                popup.open = false;
-            }
-        }
         var oldx;
         var oldy;
 
-        function dragstarted() {
+        function popupDragstarted() {
 
             oldx = Math.abs((d3.select('#popup').select('svg').attr('x')) - d3.event.x);
             oldy = Math.abs((d3.select('#popup').select('svg').attr('y')) - d3.event.y);
 
         }
 
-        function dragged() {
+        function popupDragged() {
 
             d3.select('#popup')
                 .select('svg')
@@ -592,9 +674,6 @@ d3.text('urbana_reduced.csv', function(error, data) {
                 .remove();
 
         }
-
-
-        // the code for band selection below was inspired by http://bl.ocks.org/lgersman/5311083
 
         var holdStarter = null;
         var holdDelay = 200;
@@ -719,86 +798,7 @@ d3.text('urbana_reduced.csv', function(error, data) {
             }
         }
 
-        var [currentYear, yearMax] = d3.extent(context, function (d) {
-            return d[4];
-        });
 
-        var yearSpan = yearMax - currentYear < 21 ? yearMax - currentYear : 20;
-
-        currentYear = yearMax - yearSpan;
-
-        var range = [currentYear, yearMax];
-
-        var years = d3.range(0, yearSpan + 1).map(function (d) { return currentYear + d; });
-
-        var slider = d3.select('#tpsreports').append('g')
-            .attr('id', 'slider')
-            .attr('transform', 'translate(' + 30 +', ' + (svgHeight * .92) + ')');
-
-        let xSliderScale = d3.scaleLinear()
-            .domain(range)
-            .range([0, svgWidth *.5 - 30 - 30])
-            .clamp(true); // use clamp to deal exceeding range limits
-
-        let xSliderAxis = d3.axisBottom(xSliderScale)
-            .tickValues(years)
-            .tickFormat(function (d) {
-                return '\'' + d.toString().substr(-2);
-            });
-
-        // ticks
-        slider.append('g')
-            .attr('transform', 'translate(0, 4)')
-            .call(xSliderAxis);
-
-        // red slider line
-        slider.append('line')
-            .attr('stroke', 'red')
-            .attr('stroke-width', 4)
-            .attr('stroke-linecap', 'round')
-            .attr('x1', xSliderScale.range()[0])
-            .attr('x2', xSliderScale.range()[1]);
-
-        // slider dot
-        slider.append('circle')
-            .attr('id','sliderDot')
-            .attr('r', 8)
-            .attr('stroke', 'black')
-            .attr('stroke-opacity', '0.2')
-            .attr('stroke-linecap', 'round')
-            .attr('stroke-width', 20 + 'px')
-            .call(d3.drag()
-                .on('start drag', function () {
-                    sliderDragged(d3.event.x);
-                })
-            );
-
-        function sliderDragged(xMouse) {
-            let x = xSliderScale.invert(xMouse);
-            let idx = null;
-            let middle;
-            let xPos;
-            let year;
-
-            for (let i = 0; i < years.length - 1; ++i) {
-                if (x >= years[i] && x <= years[i + 1]) {
-                    idx = i;
-                    break;
-                }
-            }
-
-            middle = (years[idx] + years[idx + 1]) * .5;
-            if (middle > x) {
-                xPos = xSliderScale(years[idx]);
-                year = years[idx];
-            } else {
-                xPos = xSliderScale(years[idx + 1]);
-                year = years[idx + 1];
-            }
-            currentYear = year;
-            d3.select('#sliderDot').attr('cx', xPos);
-            updatePopup();
-        }
 
         function yearFilter(data, year) {
             return data.filter(function (d) {
@@ -830,7 +830,7 @@ d3.text('urbana_reduced.csv', function(error, data) {
         //  code for working with original urbana_crimes.csv  //
         ////////////////////////////////////////////////////////
 
-        // var strings = ['URBANA', 'CHICAGO', 'JACKSONVILLE', 'WASHINGTON', 'KANSAS', 'NASHVILLE', 'ATLANTA', 'MINNEAPOLIS'];
+        // var strings = ['URBANA', 'CHICAGO', 'JACKSONVILLE', 'WASHINGTON', 'KANSAS CITY', 'NASHVILLE', 'ATLANTA', 'MINNEAPOLIS'];
 
         // d3.text('urbana_crimes.csv', function(error, data) {
         // d3.text('urbana_crimes_medium.csv', function(error, data) {
