@@ -1,15 +1,15 @@
 @title : VIS-A3 README
 @author: Robert Ernstbrunner
 @matnr.: 01403753
-@date  : 30.10.2018
+@date  : ..2018
 
 
 
 How I visualize the data:
 
 - Mouseover/click&band selection:
-
-
+	City centers are now represented by red circles which inflate on mouseover.
+	Clicking on a city will pin it down and the path to Urbana (for any city != Urbana) and 
 
 
 Why I visualize the data in that way:
