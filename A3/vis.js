@@ -115,7 +115,7 @@ d3.json('50m.json', function (d) {
 d3.text('urbana_reduced.csv', function(error, data) {
     if (error) throw error;
 
-    context = d3.csvParse(data, function (d, i) {
+    context = d3.csvParse(data, function (d) {
 
         d.context = [6];
         d.context[0] = +d['LATITUDE']; // latitude
@@ -723,10 +723,13 @@ d3.text('urbana_reduced.csv', function(error, data) {
             return d[4];
         });
 
-        var yearRange = yearMax - currentYear;
+        var yearSpan = yearMax - currentYear < 21 ? yearMax - currentYear : 20;
+
+        currentYear = yearMax - yearSpan;
 
         var range = [currentYear, yearMax];
-        var years = d3.range(0, yearRange + 1).map(function (d) { return currentYear + d; });
+
+        var years = d3.range(0, yearSpan + 1).map(function (d) { return currentYear + d; });
 
         var slider = d3.select('#tpsreports').append('g')
             .attr('id', 'slider')
