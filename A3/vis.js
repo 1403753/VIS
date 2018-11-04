@@ -9,8 +9,8 @@ var cities;
 
 var body = d3.select('body')
     .append('div')
-    .style('width', 3* svgWidth / 2 + 80 + 'px')
-    .style('height', svgHeight + 30 + 'px')
+    .style('width', 3 * svgWidth / 2 + 80 + 'px')
+    .style('height', 1.11 * svgHeight + 30 + 'px')
     .style('overflow', 'hidden');
 
 
@@ -26,35 +26,37 @@ var svg = body
     .attr('width', svgWidth)
     .attr('class', 'map');
 
-// setup tableView
-var tableView = body
+// setup barView
+var barView = body
     .append('div')
     .style('margin-top', 10 + 'px')
     .append('svg')
-    .attr('id', 'tpsreports')
-    .attr('height', svgHeight)
+    .attr('id', 'barView')
+    .attr('class', 'view')
+    .attr('height', svgHeight / 2 - 7.5)
     .attr('width', svgWidth / 2)
     .style('outline', 'thin solid black');
 
-var defs = tableView.append('defs');
-
-defs.append('pattern')
-    .attr('id', 'pcloadletter')
-    .attr('patternContentUnits', 'objectBoundingBox')
-    .attr('width', '100%')
-    .attr('height', '100%')
-    .append('image')
-    .attr('preserveAspectRatio', 'none')
-    .attr('xlink:href', 'pcloadletter.jpeg')
-    .attr('width', 1);
-
-tableView.append('rect')
+var scatterView = body
+    .append('div')
+    .style('margin-top' , 10 + 'px')
+    .append('svg')
+    .attr('id', 'scatterView')
+    .attr('class', 'view')
+    .attr('height', svgHeight / 2 - 7.5)
     .attr('width', svgWidth / 2)
-    .attr('height', svgHeight)
-    .style('fill', 'url(#pcloadletter)')
-    .style('opacity', 0.9)
-    .style('stroke', 'black');
+    .style('outline', 'thin solid black');
 
+
+var svg2 = body
+    .append('div')
+    .style('padding-left', 10 + 'px')
+    .style('padding-top', 5 + 'px')
+    .append('svg')
+    .attr('height', svgHeight / 10)
+    .attr('width', svgWidth + svgWidth / 2 + 20)
+    .style('outline', 'thin solid black')
+    .attr('class', 'view');
 
 var projection = d3.geoMercator()
     .scale(1300)
@@ -140,11 +142,6 @@ d3.text('urbana_reduced.csv', function(error, data) {
 
     cities = svg.append('g');
 
-    var tooltip = d3.select('body')
-        .append('div')
-        .attr('class', 'tooltip')
-        .style('opacity', 0);
-
     // add cities, lines and circles
     d3.csv('cities.csv', function (error, data) {
 
@@ -214,6 +211,7 @@ d3.text('urbana_reduced.csv', function(error, data) {
             );
 
         var mouseOnCity = false;
+        var tooltip;
 
         cities.selectAll('circle')
             .data(data)
@@ -253,6 +251,10 @@ d3.text('urbana_reduced.csv', function(error, data) {
                         .transition()
                         .attr('stroke-width', Math.log(data[i].counter + 1));
                 } else {
+                    tooltip = body.append('div')
+                        .attr('id', 'tooltip')
+                        .attr('class', 'tooltip')
+                        .style('opacity', 0);
 
                     tooltip.transition()
                         .duration(800)
@@ -267,9 +269,13 @@ d3.text('urbana_reduced.csv', function(error, data) {
             })
             .on('mouseout', function (d, i) {
                 mouseOnCity = false;
-                tooltip.transition()
-                    .duration(100)
-                    .style('opacity', 0);
+                if (tooltip) {
+                    tooltip.transition()
+                        .duration(500)
+                        .style('opacity', 0)
+                        .remove();
+                }
+
                 if (!d.pinned) {
                     d3.select(this)
                         .transition()
@@ -298,6 +304,18 @@ d3.text('urbana_reduced.csv', function(error, data) {
                 });
 
                 if (d.pinned) {
+                    tooltip = body.append('div')
+                        .attr('id', 'tooltip')
+                        .attr('class', 'tooltip')
+                        .style('opacity', 0);
+
+                    tooltip.transition()
+                        .duration(800)
+                        .style('opacity', 0.9);
+
+                    tooltip.html('click to unpin or drag a selection frame over pinned cities for multi unpinning')
+                        .style('left', (d3.event.pageX + 35) + 'px')
+                        .style('top', (d3.event.pageY - 35) + 'px');
                     d3.select(this)
                         .transition()
                         .attr('r', 10)
@@ -318,6 +336,12 @@ d3.text('urbana_reduced.csv', function(error, data) {
 
                     updateTable(newdata);
                 } else {
+                    if (tooltip) {
+                        tooltip.transition()
+                            .duration(500)
+                            .style('opacity', 0)
+                            .remove();
+                    }
                     d3.select(this)
                         .transition()
                         .duration(100)
@@ -647,7 +671,7 @@ d3.text('urbana_reduced.csv', function(error, data) {
 
         function updateTable(data) {
 
-            var update = tableView.selectAll('#gangsterdata')
+            var update = barView.selectAll('#gangsterdata')
                 .data(data);
 
             update.enter()

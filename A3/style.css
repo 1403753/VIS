@@ -46,10 +46,20 @@ rect.bar {
     pointer-events: none;
 }
 
+.view{
+    background-color: blanchedalmond;
+}
 
 .selection {
     stroke : grey;
     stroke-dasharray : 4px;
     stroke-opacity : 1;
     fill : transparent;
+}
+
+svg text{
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
