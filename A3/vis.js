@@ -1,26 +1,28 @@
 var context = [];
+var parseDate = d3.timeParse('%m/%d/%Y');
 
 var svgHeight = 600;
 var svgWidth = 950;
 var popupHeight = 200;
 var popupWidth = 300;
+var svgBottomWidth = svgWidth + svgWidth / 2 + 10;
+var svgBottomHeight = svgHeight / 7;
 var histopadding = 10;
 var cities;
 
 var body = d3.select('body')
     .append('div')
     .style('width', 3 * svgWidth / 2 + 80 + 'px')
-    .style('height', 1.11 * svgHeight + 30 + 'px')
+    .style('height', 1.12 * svgHeight + 30 + 'px')
     .style('overflow', 'hidden');
-
 
 var svg = body
     .append('div')
-    .style('width', svgWidth + 20 + 'px')
-    .style('height', svgHeight + 20 + 'px')
+    .style('width', svgWidth + 10 + 'px')
+    .style('height', svgHeight + 10 + 'px')
     .style('float', 'left')
     .style('padding-left', 10 + 'px')
-    .style('padding-top', 10 + 'px')
+    .style('padding-top', 5 + 'px')
     .append('svg')
     .attr('height', svgHeight)
     .attr('width', svgWidth)
@@ -29,34 +31,57 @@ var svg = body
 // setup barView
 var barView = body
     .append('div')
-    .style('margin-top', 10 + 'px')
+    .style('margin-top', 5 + 'px')
     .append('svg')
     .attr('id', 'barView')
     .attr('class', 'view')
-    .attr('height', svgHeight / 2 - 7.5)
+    .attr('height', svgHeight / 2 - 5)
     .attr('width', svgWidth / 2)
     .style('outline', 'thin solid black');
+
+var scatterViewWidth =  svgWidth / 2;
+var scatterViewHeight =  svgHeight / 2 - 5;
 
 var scatterView = body
     .append('div')
-    .style('margin-top' , 10 + 'px')
+    .style('margin-top' , 5 + 'px')
     .append('svg')
     .attr('id', 'scatterView')
     .attr('class', 'view')
-    .attr('height', svgHeight / 2 - 7.5)
-    .attr('width', svgWidth / 2)
+    .attr('height', scatterViewHeight)
+    .attr('width', scatterViewWidth)
     .style('outline', 'thin solid black');
 
+var xScatter = d3.scaleTime().range([10, scatterViewWidth - 10]);
+var yScatter = d3.scaleLinear().range([scatterViewHeight - 10 , 10]);
 
-var svg2 = body
+var svgBottom = body
     .append('div')
     .style('padding-left', 10 + 'px')
-    .style('padding-top', 5 + 'px')
     .append('svg')
-    .attr('height', svgHeight / 10)
-    .attr('width', svgWidth + svgWidth / 2 + 20)
+    .attr('height', svgBottomHeight)
+    .attr('width', svgBottomWidth)
     .style('outline', 'thin solid black')
     .attr('class', 'view');
+
+var brush = d3.brushX()
+    .extent([[0, 0], [svgWidth + svgWidth / 2, svgHeight/15]]);
+    // .on("end", brushed);
+
+var distanceView = svgBottom.append("g")
+    .attr('class', 'distanceView')
+    .attr('transform', 'translate(' + 5 + "," + 5 + ')');
+
+
+distanceView.append('g')
+    .attr('class', 'brush')
+    // apply brushing to this group
+    .call(brush)
+    // set brush over full window
+    .call(brush.move, [0,svgBottomWidth - 10])
+    .select('.selection')
+    .style('fill','green');
+
 
 var projection = d3.geoMercator()
     .scale(1300)
@@ -119,16 +144,15 @@ d3.text('urbana_reduced.csv', function(error, data) {
 
     context = d3.csvParse(data, function (d) {
 
-        d.context = [6];
+        d.context = [8];
         d.context[0] = +d['LATITUDE']; // latitude
         d.context[1] = +d['LONGITUDE']; // longitude
         d.context[2] = d['ARRESTEE HOME CITY']; // city
         d.context[3] = +d['AGE AT ARREST']; // age
-        d.context[4] = +d['YEAR OF ARREST']; // year
-        d.context[5] = d['CRIME CODE DESCRIPTION']; // crime
+        d.context[4] = parseDate(d['DATE OF ARREST']); // date
+        // d.context[5] := distance
         return d.context;
     });
-
 
     var cityCounter = d3.nest()
         .key(function (d) {
@@ -144,6 +168,22 @@ d3.text('urbana_reduced.csv', function(error, data) {
 
     // add cities, lines and circles
     d3.csv('cities.csv', function (error, data) {
+
+        data.forEach(function (d) {
+            cityCounter.forEach(function (c) {
+                if (d.city.toUpperCase().includes(c.key.toUpperCase()))
+                    d.counter = c.value;
+            });
+            d.pinned = false;
+        });
+
+        let urbXY = projection([data[0].longitude, data[0].latitude]);
+        context.forEach(function (d) {
+            let cXY = projection([d[1], d[0]]);
+            let xlen = (urbXY[0] - cXY[0]);
+            let ylen = (urbXY[1] - cXY[1]);
+            d[5] = Math.sqrt(xlen*xlen + ylen*ylen);
+        });
 
         cities.selectAll('text')
             .data(data)
@@ -167,13 +207,6 @@ d3.text('urbana_reduced.csv', function(error, data) {
             })
             .style('opacity', 0);
 
-        data.forEach(function (d) {
-            cityCounter.forEach(function (c) {
-                if (d.city.toUpperCase().includes(c.key.toUpperCase()))
-                    d.counter = c.value;
-            });
-            d.pinned = false;
-        });
 
         cities.selectAll('line')
             .data(data)
@@ -260,7 +293,7 @@ d3.text('urbana_reduced.csv', function(error, data) {
                         .duration(800)
                         .style('opacity', 0.9);
 
-                    tooltip.html('click to unpin or drag a selection frame over pinned cities for multi unpinning')
+                    tooltip.html('click to unpin or drag a selection frame over un/pinned cities for multi un/pinning')
                         .style('left', (d3.event.pageX + 35) + 'px')
                         .style('top', (d3.event.pageY - 35) + 'px');
 
@@ -316,6 +349,7 @@ d3.text('urbana_reduced.csv', function(error, data) {
                     tooltip.html('click to unpin or drag a selection frame over pinned cities for multi unpinning')
                         .style('left', (d3.event.pageX + 35) + 'px')
                         .style('top', (d3.event.pageY - 35) + 'px');
+
                     d3.select(this)
                         .transition()
                         .attr('r', 10)
@@ -371,7 +405,7 @@ d3.text('urbana_reduced.csv', function(error, data) {
         popup.open = false;
 
         var [currentYear, yearMax] = d3.extent(context, function (d) {
-            return d[4];
+            return d[4].getFullYear();
         });
 
         var yearSpan = yearMax - currentYear < 17 ? yearMax - currentYear : 16;
@@ -383,6 +417,7 @@ d3.text('urbana_reduced.csv', function(error, data) {
         var years = d3.range(0, yearSpan + 1).map(function (d) { return currentYear + d; });
 
         function popin() {
+            drawScatterView();
             popup = d3.select('svg')
                 .append('g')
                 .attr('id', 'popup')
@@ -559,6 +594,10 @@ d3.text('urbana_reduced.csv', function(error, data) {
                     .on('start drag', function () {
                         sliderDragged(d3.event.x);
                     })
+                    .on('end', function () {
+                        updatePopup();
+                        drawScatterView();
+                    })
                 );
 
             function sliderDragged(xMouse) {
@@ -585,7 +624,6 @@ d3.text('urbana_reduced.csv', function(error, data) {
                 }
                 currentYear = year;
                 d3.select('#sliderDot').attr('cx', xPos);
-                updatePopup();
             }
 
             updatePopup();
@@ -598,6 +636,7 @@ d3.text('urbana_reduced.csv', function(error, data) {
                 d3.select('#popup')
                     .remove();
                 popup.open = false;
+                dots.selectAll('.dot').remove();
             }
         }
 
@@ -671,7 +710,7 @@ d3.text('urbana_reduced.csv', function(error, data) {
 
         function updateTable(data) {
 
-            var update = barView.selectAll('#gangsterdata')
+            let update = barView.selectAll('#gangsterdata')
                 .data(data);
 
             update.enter()
@@ -731,23 +770,44 @@ d3.text('urbana_reduced.csv', function(error, data) {
                     if (x - r >= sFx && x + r <= sFx + sFwidth &&
                         y - r >= sFy && y + r <= sFy + sFheight) {
 
-                        data[i].pinned = false;
+                        data[i].pinned = !data[i].pinned;
 
-                        d3.select(this)
-                            .transition()
-                            .attr('r', 15)
-                            .style('fill', 'red')
-                            .attr('stroke-width', 3)
-                            .style('opacity', 1);
 
-                        d3.select('#label_' + i)
-                            .transition()
-                            .attr('dy', 0)
-                            .style('opacity', 0);
+                        if (data[i].pinned) {
+                            d3.select(this)
+                                .transition()
+                                .attr('r', 10)
+                                .style('fill', function () {
+                                    return d.color;
+                                })
+                                .attr('stroke-width', 3)
+                                .style('opacity', 1);
 
-                        d3.select('#line_' + i)
-                            .transition()
-                            .attr('stroke-width', 0);
+                            d3.select('#label_' + i)
+                                .transition()
+                                .attr('dy', 10 * (data[0].latitude <= d.latitude ? -2 : 2.5))
+                                .style('opacity', 0.2);
+
+                            d3.select('#line_' + i)
+                                .transition()
+                                .attr('stroke-width', Math.log(d.counter + 1));
+                        } else {
+                            d3.select(this)
+                                .transition()
+                                .attr('r', 15)
+                                .style('fill', 'red')
+                                .attr('stroke-width', 3)
+                                .style('opacity', 1);
+
+                            d3.select('#label_' + i)
+                                .transition()
+                                .attr('dy', 0)
+                                .style('opacity', 0);
+
+                            d3.select('#line_' + i)
+                                .transition()
+                                .attr('stroke-width', 0);
+                        }
                     }
                 });
 
@@ -758,7 +818,10 @@ d3.text('urbana_reduced.csv', function(error, data) {
                     if (d.pinned)
                         newdata.push(d);
                 });
-                updatePopup();
+                if (!popup.open)
+                    popin();
+                else
+                    updatePopup();
                 updateTable(newdata);
 
             }
@@ -826,7 +889,7 @@ d3.text('urbana_reduced.csv', function(error, data) {
 
         function yearFilter(data, year) {
             return data.filter(function (d) {
-                return d[4] === year;
+                return d[4].getFullYear() === year;
             });
         }
 
@@ -850,89 +913,47 @@ d3.text('urbana_reduced.csv', function(error, data) {
             return filteredData;
         }
 
-        ////////////////////////////////////////////////////////
-        //  code for working with original urbana_crimes.csv  //
-        ////////////////////////////////////////////////////////
+        var dots = scatterView.append('g')
+            .attr('id', 'scatterDots');
+        ///////////////////
+        //  scatterplot  //
+        ///////////////////
+        function drawScatterView() {
 
-        // var strings = ['URBANA', 'CHICAGO', 'JACKSONVILLE', 'WASHINGTON', 'KANSAS CITY', 'NASHVILLE', 'ATLANTA', 'MINNEAPOLIS'];
+            dots.selectAll('.dot').remove();
+            let pointCtr = 0;
+            let newdata = yearFilter(context.filter(function (d) {
+                    if (d[2].toUpperCase().includes("URBANA"))
+                        return pointCtr++ < 55000;
+                    else
+                        return true;
+                }
+            ), currentYear);
 
-        // d3.text('urbana_crimes.csv', function(error, data) {
-        // d3.text('urbana_crimes_medium.csv', function(error, data) {
-        // d3.text('urbana_crimes_small.csv', function(error, data) {
-        //     if (error) throw error;
-        // context = d3.csvParse(data, function (d) {
-        //
-        //
-        //     // map data (location, city, type of crime)
-        //     var point = d['ARRESTEE HOME CITY - MAPPED'].split(/[(]/).slice(1);
-        //     if (point.length) {
-        //         d.context = point.toString().match(/[+-]?\d+(?:\.\d+)?/g);
-        //         d.context[0] = +d.context[0]; // latitude
-        //         d.context[1] = +d.context[1]; // longitude
-        //         d.context[2] = d['ARRESTEE HOME CITY']; // city
-        //         d.context[3] = +d['AGE AT ARREST']; // age
-        //         d.context[4] = +d['YEAR OF ARREST']; // year
-        //         d.context[5] = d['CRIME CODE DESCRIPTION']; // crime
-        //     }
-        //     return d.context;
-        // });
-        //
-        // // filter data
-        // context = context.filter(function (d) {
-        //     if (!d) return false;
-        //
-        //     if (d.length !== 6) {
-        //         return false;
-        //     }
-        //
-        //     if (isNaN(d[0]) || isNaN(d[1]) || d[0] < 20 || d[0] > 50 || d[1] < -110 || d[1] > -70) {
-        //         return false;
-        //     }
-        //
-        //     if (d[3] < 1 || d[3] > 120) {
-        //         return false;
-        //     }
-        //
-        //     let changed = false;
-        //
-        //     strings.forEach(function (s) {
-        //         if (d[2].toUpperCase().includes(s)) {
-        //             d[2] = s;
-        //             changed = true;
-        //         }
-        //     });
-        //
-        //     return changed;
-        //
-        // });
+            xScatter.domain(d3.extent(newdata, function (d) {
+                return d[4];
+            }));
 
-        // store output
-        // var lineArray = [];
-        // context.forEach(function (p, i) {
-        //     var line = p.join(",");
-        //     lineArray.push(i == 0 ? 'LATITUDE,LONGITUDE,ARRESTEE HOME CITY,AGE AT ARREST,YEAR OF ARREST,CRIME CODE DESCRIPTION\n' : line);
-        // });
-        // var csvContent = lineArray.join("\n");
-        //
-        // var blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        // if (navigator.msSaveBlob) { // IE 10+
-        //     navigator.msSaveBlob(blob, 'AAA.csv');
-        // } else {
-        //     var link = document.createElement("a");
-        //     if (link.download !== undefined) { // feature detection
-        //         // Browsers that support HTML5 download attribute
-        //         var url = URL.createObjectURL(blob);
-        //         link.setAttribute("href", url);
-        //         link.setAttribute("download", 'AAA.csv');
-        //         link.style.visibility = 'hidden';
-        //         document.body.appendChild(link);
-        //         link.click();
-        //         document.body.removeChild(link);
-        //     }
-        // }
+            yScatter.domain([0, d3.max(newdata, function (d) {
+                return d[5]; // distance
+            })]);
 
+
+            dots.attr('clip-path', 'url(#clip)');
+            dots.selectAll('.dot')
+                .data(newdata)
+                .enter()
+                .append('circle')
+                .attr('class', 'dot')
+                .attr('r',2)
+                .style('opacity', .5)
+                .attr('cx', function(d) { return xScatter(d[4]); })
+                .attr('cy', function(d) { return yScatter(d[5]); });
+
+        }
 
     });
+
+
+
 }); // end d3.text
-
-
