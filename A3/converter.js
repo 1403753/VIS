@@ -4,7 +4,7 @@
 
 var context = [];
 
-var strings = ['URBANA', 'CHICAGO', 'JACKSONVILLE', 'WASHINGTON', 'KANSAS CITY', 'NASHVILLE', 'ATLANTA', 'MINNEAPOLIS'];
+var strings = ['URBANA', 'CHICAGO', 'JACKSONVILLE', 'WASHINGTON', 'KANSAS', 'NASHVILLE', 'ATLANTA', 'MINNEAPOLIS'];
 
 d3.text('urbana_crimes.csv', function(error, data) {
 
@@ -46,7 +46,10 @@ d3.text('urbana_crimes.csv', function(error, data) {
 
         strings.forEach(function (s) {
             if (d[2].toUpperCase().includes(s)) {
-                d[2] = s;
+                if(s === 'KANSAS')
+                    d[2] = 'KANSAS CITY';
+                else
+                    d[2] = s;
                 changed = true;
             }
         });
@@ -59,20 +62,20 @@ d3.text('urbana_crimes.csv', function(error, data) {
     var lineArray = [];
     context.forEach(function (p, i) {
         var line = p.join(",");
-        lineArray.push(i === 0 ? 'LATITUDE,LONGITUDE,ARRESTEE HOME CITY,AGE AT ARREST,DATE OF ARREST,CRIME CODE DESCRIPTION\n' : line);
+        lineArray.push(i === 0 ? 'LATITUDE,LONGITUDE,ARRESTEE HOME CITY,AGE AT ARREST,DATE OF ARREST,CRIME CODE DESCRIPTION' : line);
     });
     var csvContent = lineArray.join("\n");
 
     var blob = new Blob([csvContent], {type: 'text/csv;charset=utf-8;'});
     if (navigator.msSaveBlob) { // IE 10+
-        navigator.msSaveBlob(blob, 'urbana_reduced2.csv');
+        navigator.msSaveBlob(blob, 'urbana_reduced.csv');
     } else {
         var link = document.createElement("a");
         if (link.download !== undefined) { // feature detection
             // Browsers that support HTML5 download attribute
             var url = URL.createObjectURL(blob);
             link.setAttribute("href", url);
-            link.setAttribute("download", 'urbana_reduced2.csv');
+            link.setAttribute("download", 'urbana_reduced.csv');
             link.style.visibility = 'hidden';
             document.body.appendChild(link);
             link.click();

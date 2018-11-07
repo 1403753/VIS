@@ -5,8 +5,13 @@ var svgHeight = 600;
 var svgWidth = 950;
 var popupHeight = 200;
 var popupWidth = 300;
-var svgBottomWidth = svgWidth + svgWidth / 2 + 10;
 var svgBottomHeight = svgHeight / 7;
+var svgBottomWidth = svgWidth + svgWidth / 2 + 10;
+var barViewHeight = svgHeight / 2 - 5;
+var barViewWidth = svgWidth / 2;
+var scatterViewHeight =  svgHeight / 2 - 5;
+var scatterViewWidth =  svgWidth / 2;
+
 var histopadding = 10;
 var cities;
 
@@ -28,19 +33,16 @@ var svg = body
     .attr('width', svgWidth)
     .attr('class', 'map');
 
-// setup barView
 var barView = body
     .append('div')
     .style('margin-top', 5 + 'px')
     .append('svg')
     .attr('id', 'barView')
     .attr('class', 'view')
-    .attr('height', svgHeight / 2 - 5)
-    .attr('width', svgWidth / 2)
+    .attr('height', barViewHeight)
+    .attr('width', barViewWidth)
     .style('outline', 'thin solid black');
 
-var scatterViewWidth =  svgWidth / 2;
-var scatterViewHeight =  svgHeight / 2 - 5;
 
 var scatterView = body
     .append('div')
@@ -556,7 +558,6 @@ d3.text('urbana_reduced.csv', function(error, data) {
             var slider = d3.select('#popupWindow').append('g')
                 .attr('id', 'slider')
                 .attr('transform', 'translate(' + 20 +', ' + (popupHeight + 40) + ')');
-            // .attr('transform', 'translate(' + 30 +', ' + (svgHeight * .92) + ')');
 
             let xSliderScale = d3.scaleLinear()
                 .domain(range)
@@ -708,33 +709,102 @@ d3.text('urbana_reduced.csv', function(error, data) {
                 .attr('y', d3.event.y - oldy);
         }
 
+        var barViewLogScale = d3.scaleLog()
+            .range([barViewHeight - 60, 0])
+            .domain([0, 0]);
+        var yBarViewAxis = d3.axisLeft(barViewLogScale);
+
+        var barViewCityScale = d3.scaleLinear()
+            .range([100, 380])
+            .domain([1,8]);
+
+        var xBarViewAxis = d3.axisBottom(barViewCityScale)
+            .ticks(8);
+
+        var yBarViewAxisGroup = barView.append('g')
+            .attr('transform', 'translate(' + 50 + ',' + 10 + ')')
+            .call(yBarViewAxis);
+
+        var xBarViewAxisGroup = barView.append('g')
+            .attr('transform', 'translate(' + 15 + ',' + (barViewHeight - 40) + ')')
+            .call(xBarViewAxis);
+
         function updateTable(data) {
 
-            let update = barView.selectAll('#gangsterdata')
+            let maxCounter = d3.max(data, function(d) {
+                return d.counter;
+            });
+
+            barViewLogScale.domain([maxCounter, .1]);
+
+            let bars = barView.selectAll('rect')
                 .data(data);
 
-            update.enter()
+            let barsEnter =  bars.enter()
+                .append('rect')
+                .attr('y', barViewHeight - 50);
+
+            bars.merge(barsEnter)
+                .attr('x', function(d,i){
+                    return 100 + i*(30 + 10);
+                })
+                .style('fill', function (d) {
+                    return d.color;
+                })
+                .transition()
+                .attr('y', function(d){
+                    return barViewHeight - 50 - barViewLogScale(d.counter);
+                })
+                .attr('width', 30)
+                .attr('height', function(d){
+                    return barViewLogScale(d.counter);
+                });
+
+
+            bars.exit()
+                .transition()
+                .attr('y', barViewHeight - 50)
+                .attr('height', 0)
+                .remove();
+
+
+            let label = barView.selectAll('.gangsterdata')
+                .data(data);
+
+            label.enter()
                 .append('text')
-                .attr('id', 'gangsterdata')
-                .attr('x', 0)
-                .attr('y', function (d, i) {
-                    return i * 20 + 20;
+                .attr('class', 'gangsterdata')
+                .attr("transform", "rotate(-90)")
+                .attr('x', function(){
+                    return - (barViewHeight - 40);
+                })
+                .attr('y', function(d,i){
+                    return 110 + i*(30 + 10);
                 })
                 .attr('dx', 17)
                 .attr('dy', 10)
-                .style('fill', 'orange')
+                .style('fill', 'black')
                 .attr('text-anchor', 'start')
                 .attr('font-family', 'sans-serif')
                 .text(function (d) {
-                    return d.city + ' : ' + d.counter;
+                    return d.city;
                 });
 
-            update.text(function (d) {
-                return d.city + ' : ' + d.counter;
+            label.text(function (d) {
+                return d.city;
             });
 
-            update.exit()
+            label.exit()
                 .remove();
+
+            barViewLogScale.domain([.1, maxCounter]);
+
+            yBarViewAxis.scale(barViewLogScale);
+                // .ticks(3);
+
+            yBarViewAxisGroup.call(yBarViewAxis);
+
+
 
         }
 
