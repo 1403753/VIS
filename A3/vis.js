@@ -348,7 +348,7 @@ d3.text('urbana_reduced.csv', function(error, data) {
                         .duration(800)
                         .style('opacity', 0.9);
 
-                    tooltip.html('click to unpin or drag a selection frame over pinned cities for multi unpinning')
+                    tooltip.html('click to unpin or drag a selection frame over un/pinned cities for multi un/pinning')
                         .style('left', (d3.event.pageX + 35) + 'px')
                         .style('top', (d3.event.pageY - 35) + 'px');
 
@@ -712,22 +712,30 @@ d3.text('urbana_reduced.csv', function(error, data) {
         var barViewLogScale = d3.scaleLog()
             .range([barViewHeight - 60, 0])
             .domain([0, 0]);
-        var yBarViewAxis = d3.axisLeft(barViewLogScale);
 
-        var barViewCityScale = d3.scaleLinear()
-            .range([100, 380])
-            .domain([1,8]);
-
-        var xBarViewAxis = d3.axisBottom(barViewCityScale)
-            .ticks(8);
+        var yBarViewAxis = d3.axisLeft(barViewLogScale)
+            .tickFormat(function (d) {
+                return barViewLogScale.tickFormat(4, d3.format(",d"))(d)
+            });
 
         var yBarViewAxisGroup = barView.append('g')
             .attr('transform', 'translate(' + 50 + ',' + 10 + ')')
             .call(yBarViewAxis);
 
+        var barViewCityScale = d3.scaleLinear()
+            .range([100, 100]);
+
+        var xBarViewAxis = d3.axisBottom(barViewCityScale)
+            .tickFormat(d3.format('d'));
+
+        xBarViewAxis.tickValues([]);
+
         var xBarViewAxisGroup = barView.append('g')
             .attr('transform', 'translate(' + 15 + ',' + (barViewHeight - 40) + ')')
-            .call(xBarViewAxis);
+
+
+        xBarViewAxisGroup.call(xBarViewAxis);
+
 
         function updateTable(data) {
 
@@ -736,6 +744,21 @@ d3.text('urbana_reduced.csv', function(error, data) {
             });
 
             barViewLogScale.domain([maxCounter, .1]);
+
+            let pinnedCities = d3.sum(data, function (d){
+                return +d.pinned;
+            });
+
+
+            barViewCityScale.domain([1, pinnedCities])
+            if (pinnedCities)
+                barViewCityScale.range([100, 60 + pinnedCities * 40]);
+            else
+                barViewCityScale.range([100, 100]);
+
+            xBarViewAxis.tickValues(Array.from({length: pinnedCities}, (x,i) => i + 1));
+
+            xBarViewAxisGroup.call(xBarViewAxis);
 
             let bars = barView.selectAll('rect')
                 .data(data);
@@ -787,11 +810,11 @@ d3.text('urbana_reduced.csv', function(error, data) {
                 .attr('text-anchor', 'start')
                 .attr('font-family', 'sans-serif')
                 .text(function (d) {
-                    return d.city;
+                    return d.city + ': ' + d.counter;
                 });
 
             label.text(function (d) {
-                return d.city;
+                return d.city + ': ' + d.counter;
             });
 
             label.exit()
@@ -800,7 +823,6 @@ d3.text('urbana_reduced.csv', function(error, data) {
             barViewLogScale.domain([.1, maxCounter]);
 
             yBarViewAxis.scale(barViewLogScale);
-                // .ticks(3);
 
             yBarViewAxisGroup.call(yBarViewAxis);
 
