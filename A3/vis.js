@@ -426,7 +426,7 @@ d3.text('urbana_reduced.csv', function(error, data) {
                 .append('svg')
                 .attr('id', 'popupWindow')
                 .attr('x', svgWidth - popupWidth - 80)
-                .attr('y', svgHeight - popupHeight - 120);
+                .attr('y', svgHeight - popupHeight - 140);
 
             popup.open = true;
 
@@ -531,6 +531,12 @@ d3.text('urbana_reduced.csv', function(error, data) {
                 .attr('y',  popupHeight + 30)
                 .style('text-anchor', 'middle')
                 .text('Age');
+
+            popup.append('text')
+                .attr('x', (popupWidth + 5*histopadding) / 2 + 20)
+                .attr('y',  popupHeight + 80)
+                .style('text-anchor', 'middle')
+                .text('Year');
 
             popup.append('text')
                 .attr("transform", "rotate(-90)")
@@ -718,9 +724,23 @@ d3.text('urbana_reduced.csv', function(error, data) {
                 return barViewLogScale.tickFormat(4, d3.format(",d"))(d)
             });
 
-        var yBarViewAxisGroup = barView.append('g')
-            .attr('transform', 'translate(' + 50 + ',' + 10 + ')')
+        barView.append('g')
+            .attr('id', 'yBarView')
+            .attr('transform', 'translate(' + 60 + ',' + 10 + ')')
             .call(yBarViewAxis);
+
+        var xBarViewLabel = barView.append('text')
+            .attr('x', 115)
+            .attr('y',  barViewHeight - 10)
+            .style('text-anchor', 'middle')
+            .text('Cities');
+
+        barView.append('text')
+            .attr("transform", "rotate(-90)")
+            .attr('x', -((barViewHeight) / 2 - 10) )
+            .attr('y', 2*histopadding - 3)
+            .style('text-anchor', 'middle')
+            .text('Population');
 
         var barViewCityScale = d3.scaleLinear()
             .range([100, 100]);
@@ -730,35 +750,35 @@ d3.text('urbana_reduced.csv', function(error, data) {
 
         xBarViewAxis.tickValues([]);
 
-        var xBarViewAxisGroup = barView.append('g')
+        barView.append('g')
+            .attr('id', 'xBarView')
             .attr('transform', 'translate(' + 15 + ',' + (barViewHeight - 40) + ')')
-
-
-        xBarViewAxisGroup.call(xBarViewAxis);
+            .call(xBarViewAxis);
 
 
         function updateTable(data) {
 
-            let maxCounter = d3.max(data, function(d) {
+            let maxCounter = d3.max(data, function (d) {
                 return d.counter;
             });
 
             barViewLogScale.domain([maxCounter, .1]);
 
-            let pinnedCities = d3.sum(data, function (d){
+            let pinnedCities = d3.sum(data, function (d) {
                 return +d.pinned;
             });
 
 
-            barViewCityScale.domain([1, pinnedCities])
-            if (pinnedCities)
-                barViewCityScale.range([100, 60 + pinnedCities * 40]);
-            else
-                barViewCityScale.range([100, 100]);
+            barViewCityScale.domain([1, pinnedCities]);
+
+            barViewCityScale.range([100, d3.max([100, 60 + pinnedCities * 40])]);
+            xBarViewLabel.transition()
+                .attr('dx', d3.max([0, ((pinnedCities - 1)  * 40) / 2]));
+
 
             xBarViewAxis.tickValues(Array.from({length: pinnedCities}, (x,i) => i + 1));
 
-            xBarViewAxisGroup.call(xBarViewAxis);
+            d3.select('#xBarView').call(xBarViewAxis);
 
             let bars = barView.selectAll('rect')
                 .data(data);
@@ -824,9 +844,7 @@ d3.text('urbana_reduced.csv', function(error, data) {
 
             yBarViewAxis.scale(barViewLogScale);
 
-            yBarViewAxisGroup.call(yBarViewAxis);
-
-
+            d3.select('#yBarView').call(yBarViewAxis);
 
         }
 
