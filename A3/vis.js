@@ -1,16 +1,14 @@
 var context = [];
 var parseDate = d3.timeParse('%m/%d/%Y');
 
-var svgHeight = 600;
+var svgHeight = 650;
 var svgWidth = 950;
 var popupHeight = 200;
 var popupWidth = 300;
-var svgBottomHeight = svgHeight / 7;
-var svgBottomWidth = svgWidth + svgWidth / 2 + 10;
 var barViewHeight = svgHeight / 2 - 5;
 var barViewWidth = svgWidth / 2;
-var scatterViewHeight =  svgHeight / 2 - 5;
-var scatterViewWidth =  svgWidth / 2;
+var rightViewHeight =  svgHeight / 2 - 5;
+var rightViewWidth =  svgWidth * .56;
 
 var histopadding = 10;
 var cities;
@@ -21,8 +19,7 @@ var body = d3.select('body')
     .style('height', 1.12 * svgHeight + 30 + 'px')
     .style('overflow', 'hidden');
 
-var svg = body
-    .append('div')
+var svg = body.append('div')
     .style('width', svgWidth + 10 + 'px')
     .style('height', svgHeight + 10 + 'px')
     .style('float', 'left')
@@ -33,61 +30,35 @@ var svg = body
     .attr('width', svgWidth)
     .attr('class', 'map');
 
-var barView = body
-    .append('div')
-    .style('margin-top', 5 + 'px')
-    .append('svg')
-    .attr('id', 'barView')
-    .attr('class', 'view')
-    .attr('height', barViewHeight)
-    .attr('width', barViewWidth)
-    .style('outline', 'thin solid black');
-
-
-var scatterView = body
-    .append('div')
+var distanceView = body.append('div')
     .style('margin-top' , 5 + 'px')
     .append('svg')
-    .attr('id', 'scatterView')
+    .attr('id', 'distanceView')
     .attr('class', 'view')
-    .attr('height', scatterViewHeight)
-    .attr('width', scatterViewWidth)
+    .attr('height', rightViewHeight)
+    .attr('width', rightViewWidth)
     .style('outline', 'thin solid black');
 
-var xScatter = d3.scaleTime().range([10, scatterViewWidth - 10]);
-var yScatter = d3.scaleLinear().range([scatterViewHeight - 10 , 10]);
 
-var svgBottom = body
-    .append('div')
-    .style('padding-left', 10 + 'px')
-    .append('svg')
-    .attr('height', svgBottomHeight)
-    .attr('width', svgBottomWidth)
-    .style('outline', 'thin solid black')
-    .attr('class', 'view');
 
-var brush = d3.brushX()
-    .extent([[0, 0], [svgWidth + svgWidth / 2, svgHeight/15]]);
+var distBrush = d3.brushX()
+    .extent([[5, 10], [rightViewWidth - 5, svgHeight/15]])
     // .on("end", brushed);
 
-var distanceView = svgBottom.append("g")
-    .attr('class', 'distanceView')
-    .attr('transform', 'translate(' + 5 + "," + 5 + ')');
-
-
 distanceView.append('g')
-    .attr('class', 'brush')
+    .attr('class', 'distBrush')
+    .attr('transform', 'translate(' + 0 + ',' + (rightViewHeight - 51) + ')')
     // apply brushing to this group
-    .call(brush)
+    .call(distBrush)
     // set brush over full window
-    .call(brush.move, [0,svgBottomWidth - 10])
+    .call(distBrush.move, [5,rightViewWidth - 5])
     .select('.selection')
     .style('fill','green');
 
 
 var projection = d3.geoMercator()
     .scale(1300)
-    .translate([svgWidth / .410, svgHeight / .50]);
+    .translate([svgWidth / .420, svgHeight / .50]);
 
 var path = d3.geoPath()
     .projection(projection);
@@ -140,6 +111,17 @@ d3.json('50m.json', function (d) {
         .attr('transform', 'translate(' + 70 + ',' + (svgHeight - 30) + ')')
         .text('(miles)', 'sans-serif');
 });
+
+
+var barView = svg.append('g')
+    .append('svg')
+    .attr('id', 'barView')
+    .attr('class', 'view')
+    .attr('height', barViewHeight)
+    .attr('width', barViewWidth)
+    .attr('x', svgWidth - barViewWidth + 60)
+    .attr('y', -5);
+    // .style('outline', 'thin solid black');
 
 d3.text('urbana_reduced.csv', function(error, data) {
     if (error) throw error;
@@ -419,7 +401,7 @@ d3.text('urbana_reduced.csv', function(error, data) {
         var years = d3.range(0, yearSpan + 1).map(function (d) { return currentYear + d; });
 
         function popin() {
-            drawScatterView();
+            updateScatterView();
             popup = d3.select('svg')
                 .append('g')
                 .attr('id', 'popup')
@@ -543,7 +525,7 @@ d3.text('urbana_reduced.csv', function(error, data) {
                 .attr('x', -((popupHeight) / 2) )
                 .attr('y', 2*histopadding - 3)
                 .style('text-anchor', 'middle')
-                .text('Population');
+                .text('Crimes');
 
 
             popup.selectAll('#popupBar')
@@ -603,7 +585,7 @@ d3.text('urbana_reduced.csv', function(error, data) {
                     })
                     .on('end', function () {
                         updatePopup();
-                        drawScatterView();
+                        updateScatterView();
                     })
                 );
 
@@ -740,7 +722,7 @@ d3.text('urbana_reduced.csv', function(error, data) {
             .attr('x', -((barViewHeight) / 2 - 10) )
             .attr('y', 2*histopadding - 3)
             .style('text-anchor', 'middle')
-            .text('Population');
+            .text('Crimes');
 
         var barViewCityScale = d3.scaleLinear()
             .range([100, 100]);
@@ -830,11 +812,11 @@ d3.text('urbana_reduced.csv', function(error, data) {
                 .attr('text-anchor', 'start')
                 .attr('font-family', 'sans-serif')
                 .text(function (d) {
-                    return d.city + ': ' + d.counter;
+                    return d.city;
                 });
 
             label.text(function (d) {
-                return d.city + ': ' + d.counter;
+                return d.city;
             });
 
             label.exit()
@@ -1023,14 +1005,71 @@ d3.text('urbana_reduced.csv', function(error, data) {
             return filteredData;
         }
 
-        var dots = scatterView.append('g')
-            .attr('id', 'scatterDots');
         ///////////////////
         //  scatterplot  //
         ///////////////////
-        function drawScatterView() {
+        var scatterView = body.append('div')
+            .style('margin-top' , 5 + 'px')
+            .append('svg')
+            .attr('id', 'scatterView')
+            .attr('class', 'view')
+            .attr('height', rightViewHeight)
+            .attr('width', rightViewWidth)
+            .style('outline', 'thin solid black');
+
+        var scatBrush = d3.brushX()
+            .extent([[20, 10], [rightViewWidth - 20, 50]]);
+
+        scatterView.append('g')
+            .attr('class', 'scatBrush')
+            .attr('transform', 'translate(' + 0 + ',' + (rightViewHeight - 90) + ')');
+
+
+        scatterView.append('defs')
+            .append('clipPath')
+            .attr('id', 'clip')
+            .append('rect')
+            .attr('width', rightViewWidth)
+            .attr('height', rightViewHeight);
+
+        var x1Scatter = d3.scaleTime().range([20, rightViewWidth - 20]);
+        var x2Scatter = d3.scaleTime().range([20, rightViewWidth - 20]);
+        var y1Scatter = d3.scaleLinear().range([rightViewHeight - 110 , 10]);
+        var y2Scatter = d3.scaleLinear().range([rightViewHeight - 10 , rightViewHeight - 20]);
+
+        scatBrush.on('end', brushed);
+
+        var dots = scatterView.append('g')
+            .attr('id', 'scatterDots');
+
+
+
+        var x1ScatterAxis = d3.axisBottom(x1Scatter),
+            x2ScatterAxis = d3.axisBottom(x2Scatter),
+            y1ScatterAxis = d3.axisLeft(y1Scatter);
+
+        scatterView.append('g')
+            .attr('class', 'axis x-axis')
+            .attr('transform', 'translate(0,' + (rightViewHeight - 100) + ')');
+
+        scatterView.append('g')
+            .attr('class', 'axis x2-axis')
+            .attr('transform', 'translate(0,' + (rightViewHeight - 30) + ')');
+
+        function updateScatterView() {
 
             dots.selectAll('.dot').remove();
+
+            // apply brushing to this group
+
+
+            scatterView.select('.scatBrush')
+                .call(scatBrush)
+                // set brush over full window
+                .call(scatBrush.move, [20, rightViewWidth - 20])
+                .select('.selection')
+                .style('fill','blue');
+
             let pointCtr = 0;
             let newdata = yearFilter(context.filter(function (d) {
                     if (d[2].toUpperCase().includes("URBANA"))
@@ -1040,14 +1079,21 @@ d3.text('urbana_reduced.csv', function(error, data) {
                 }
             ), currentYear);
 
-            xScatter.domain(d3.extent(newdata, function (d) {
-                return d[4];
-            }));
+            x1Scatter.domain([new Date(currentYear, 0, 1, 0, 0, 0, 0), new Date(currentYear, 12, 1, 0, 0, 0, 0)]);
 
-            yScatter.domain([0, d3.max(newdata, function (d) {
+            scatterView.select('.x2-axis')
+                .attr('dx', -20)
+                .call(x1ScatterAxis);
+
+            x2Scatter.domain(x1Scatter.domain());
+
+            scatterView.select('.x-axis').call(x2ScatterAxis);
+
+            y1Scatter.domain([0, d3.max(newdata, function (d) {
                 return d[5]; // distance
             })]);
 
+            y2Scatter.domain(y1Scatter.domain());
 
             dots.attr('clip-path', 'url(#clip)');
             dots.selectAll('.dot')
@@ -1057,9 +1103,17 @@ d3.text('urbana_reduced.csv', function(error, data) {
                 .attr('class', 'dot')
                 .attr('r',2)
                 .style('opacity', .5)
-                .attr('cx', function(d) { return xScatter(d[4]); })
-                .attr('cy', function(d) { return yScatter(d[5]); });
+                .attr('cx', function(d) { return x1Scatter(d[4]); })
+                .attr('cy', function(d) { return y1Scatter(d[5]); });
+        }
 
+        function brushed() {
+            var selection = d3.event.selection;
+            x1Scatter.domain(selection.map(x2Scatter.invert, x2Scatter));
+            scatterView.selectAll('.dot')
+                .attr('cx', function(d) { return x1Scatter(d[4]); })
+                .attr('cy', function(d) { return y1Scatter(d[5]); });
+            scatterView.select(".x-axis").call(x1ScatterAxis);
         }
 
     });
