@@ -2,63 +2,42 @@ var context = [];
 var parseDate = d3.timeParse('%m/%d/%Y');
 
 var svgHeight = 650;
-var svgWidth = 950;
+var svgWidth = 910;
 var popupHeight = 200;
 var popupWidth = 300;
 var barViewHeight = svgHeight / 2 - 5;
 var barViewWidth = svgWidth / 2;
 var rightViewHeight =  svgHeight / 2 - 5;
-var rightViewWidth =  svgWidth * .56;
+var rightViewWidth =  svgWidth * .65;
 
 var histopadding = 10;
 var cities;
 
 var body = d3.select('body')
     .append('div')
-    .style('width', 3 * svgWidth / 2 + 80 + 'px')
-    .style('height', 1.12 * svgHeight + 30 + 'px')
+    // .style('width', 3 * svgWidth / 2 + 160 + 'px')
+    .style('width', '100%')
+    // .style('height', svgHeight + 10 + 'px')
+    .style('height', '100%')
     .style('overflow', 'hidden');
 
 var svg = body.append('div')
-    .style('width', svgWidth + 10 + 'px')
-    .style('height', svgHeight + 10 + 'px')
+    // .style('width', svgWidth + 10 + 'px')
+    .style('width', '60%')
+    // .style('height', svgHeight + 10 + 'px')
+    .style('height', '100%')
     .style('float', 'left')
-    .style('padding-left', 10 + 'px')
+    .style('padding-left', 5 + 'px')
     .style('padding-top', 5 + 'px')
     .append('svg')
+    .style('margin-right', 50 + 'px')
     .attr('height', svgHeight)
     .attr('width', svgWidth)
     .attr('class', 'map');
 
-var distanceView = body.append('div')
-    .style('margin-top' , 5 + 'px')
-    .append('svg')
-    .attr('id', 'distanceView')
-    .attr('class', 'view')
-    .attr('height', rightViewHeight)
-    .attr('width', rightViewWidth)
-    .style('outline', 'thin solid black');
-
-
-
-var distBrush = d3.brushX()
-    .extent([[5, 10], [rightViewWidth - 5, svgHeight/15]])
-    // .on("end", brushed);
-
-distanceView.append('g')
-    .attr('class', 'distBrush')
-    .attr('transform', 'translate(' + 0 + ',' + (rightViewHeight - 51) + ')')
-    // apply brushing to this group
-    .call(distBrush)
-    // set brush over full window
-    .call(distBrush.move, [5,rightViewWidth - 5])
-    .select('.selection')
-    .style('fill','green');
-
-
 var projection = d3.geoMercator()
     .scale(1300)
-    .translate([svgWidth / .420, svgHeight / .50]);
+    .translate([svgWidth / .406, svgHeight / .50]);
 
 var path = d3.geoPath()
     .projection(projection);
@@ -119,9 +98,151 @@ var barView = svg.append('g')
     .attr('class', 'view')
     .attr('height', barViewHeight)
     .attr('width', barViewWidth)
-    .attr('x', svgWidth - barViewWidth + 60)
+    .attr('x', svgWidth - barViewWidth + 30)
     .attr('y', -5);
     // .style('outline', 'thin solid black');
+
+/////////////
+// ageView //
+/////////////
+var ageView = body.append('div')
+    .style('margin-top' , 5 + 'px')
+    .style('margin-left', 5 + 'px')
+    .append('svg')
+    .attr('id', 'scatterView')
+    .attr('class', 'view')
+    .attr('height', rightViewHeight)
+    .attr('width', rightViewWidth)
+    .style('outline', 'thin solid black');
+
+var ctxBars = ageView.append('g')
+    .attr('id', 'ctxAgeBars');
+
+var ageBrush = d3.brushX()
+    .extent([[55, 10], [rightViewWidth - 15, 50]]);
+
+ageView.append('g')
+    .attr('class', 'ageBrush')
+    .attr('transform', 'translate(' + 0 + ',' + (rightViewHeight - 90) + ')');
+
+
+ageView.append('defs')
+    .append('clipPath')
+    .attr('id', 'clip')
+    .append('rect')
+    .attr('width', rightViewWidth - 70)
+    .attr('height', rightViewHeight)
+    .attr('x', 55);
+
+var x1Age = d3.scaleLinear().range([55, rightViewWidth - 15]);
+var y1Age = d3.scaleLinear().range([rightViewHeight - 110 , 10]);
+
+var x2Age = d3.scaleLinear().range([55, rightViewWidth - 15]);
+var y2Age = d3.scaleLinear().range([rightViewHeight - 40, rightViewHeight - 75]);
+
+
+var bars = ageView.append('g')
+    .attr('id', 'ageBars');
+
+var x1AgeAxis = d3.axisBottom(x1Age);
+var x2AgeAxis = d3.axisBottom(x2Age);
+var yAgeAxis = d3.axisLeft(y1Age);
+
+ageView.append('g')
+    .attr('class', 'axis x-axis')
+    .attr('transform', 'translate(0,' + (rightViewHeight - 105) + ')');
+
+ageView.append('g')
+    .attr('class', 'axis x2-axis')
+    .attr('transform', 'translate(0,' + (rightViewHeight - 40) + ')');
+
+ageView.append('g')
+    .attr('class', 'axis y-axis')
+    .attr('transform', 'translate(52,' + 0 + ')');
+
+ageView.append('text')
+    .attr('transform', 'rotate(-90)')
+    .attr('y', 15)
+    .attr('x', -(rightViewHeight / 3))
+    .style('text-anchor', 'middle')
+    .text('Crimes');
+
+ageView.append('text')
+    .attr('x', rightViewWidth / 2)
+    .attr('y', rightViewHeight - 10)
+    .style('text-anchor', 'middle')
+    .text('Age');
+
+///////////////////
+//  scatterView  //
+///////////////////
+var scatterView = body.append('div')
+    .style('margin-top' , 5 + 'px')
+    .style('margin-left', 5 + 'px')
+    .append('svg')
+    .attr('id', 'scatterView')
+    .attr('class', 'view')
+    .attr('height', rightViewHeight)
+    .attr('width', rightViewWidth)
+    .style('outline', 'thin solid black');
+
+var scatBrush = d3.brushX()
+    .extent([[55, 10], [rightViewWidth - 15, 50]]);
+
+scatterView.append('g')
+    .attr('class', 'scatBrush')
+    .attr('transform', 'translate(' + 0 + ',' + (rightViewHeight - 90) + ')');
+
+
+scatterView.append('defs')
+    .append('clipPath')
+    .attr('id', 'clip2')
+    .append('rect')
+    .attr('width', rightViewWidth - 70)
+    .attr('height', rightViewHeight)
+    .attr('x', 55);
+
+var x1Scatter = d3.scaleTime().range([55, rightViewWidth - 15]);
+var y1Scatter = d3.scaleLinear().range([rightViewHeight - 110 , 10]);
+
+var x2Scatter = d3.scaleTime().range([55, rightViewWidth - 15]);
+var y2Scatter = d3.scaleLinear().range([rightViewHeight - 40, rightViewHeight - 75]);
+
+var dots = scatterView.append('g')
+    .attr('id', 'scatterDots');
+
+var ctxDots = scatterView.append('g')
+    .attr('id', 'contextScatterDots');
+
+
+var x1ScatterAxis = d3.axisBottom(x1Scatter);
+var x2ScatterAxis = d3.axisBottom(x2Scatter);
+var yScatterAxis = d3.axisLeft(y1Scatter);
+
+scatterView.append('g')
+    .attr('class', 'axis x-axis')
+    .attr('transform', 'translate(0,' + (rightViewHeight - 105) + ')');
+
+scatterView.append('g')
+    .attr('class', 'axis x2-axis')
+    .attr('transform', 'translate(0,' + (rightViewHeight - 40) + ')');
+
+scatterView.append('g')
+    .attr('class', 'axis y-axis')
+    .attr('transform', 'translate(50,' + 0 + ')');
+
+scatterView.append('text')
+    .attr('transform', 'rotate(-90)')
+    .attr('y', 15)
+    .attr('x', -(rightViewHeight / 3))
+    .style('text-anchor', 'middle')
+    .text('Cartesian map distance');
+
+scatterView.append('text')
+    .attr('x', rightViewWidth / 2)
+    .attr('y', rightViewHeight - 10)
+    .style('text-anchor', 'middle')
+    .text('Date');
 
 d3.text('urbana_reduced.csv', function(error, data) {
     if (error) throw error;
@@ -152,6 +273,7 @@ d3.text('urbana_reduced.csv', function(error, data) {
 
     // add cities, lines and circles
     d3.csv('cities.csv', function (error, data) {
+
 
         data.forEach(function (d) {
             cityCounter.forEach(function (c) {
@@ -521,7 +643,7 @@ d3.text('urbana_reduced.csv', function(error, data) {
                 .text('Year');
 
             popup.append('text')
-                .attr("transform", "rotate(-90)")
+                .attr('transform', 'rotate(-90)')
                 .attr('x', -((popupHeight) / 2) )
                 .attr('y', 2*histopadding - 3)
                 .style('text-anchor', 'middle')
@@ -537,7 +659,7 @@ d3.text('urbana_reduced.csv', function(error, data) {
                 .attr('id', 'popupBar')
                 .attr('class', 'bar')
                 .attr('transform', function (d) {
-                    return "translate(" + (xh(d.x0) + 5 * histopadding) + "," + (yh(d.length)) + ")";
+                    return 'translate(' + (xh(d.x0) + 5 * histopadding) + ',' + (yh(d.length)) + ')';
                 })
                 .attr('width', function (d) {
                     return xh(d.x1) - xh(d.x0);
@@ -625,7 +747,6 @@ d3.text('urbana_reduced.csv', function(error, data) {
                 d3.select('#popup')
                     .remove();
                 popup.open = false;
-                dots.selectAll('.dot').remove();
             }
         }
 
@@ -666,7 +787,7 @@ d3.text('urbana_reduced.csv', function(error, data) {
                     .data(bins)
                     .transition()
                     .attr('transform', function (d) {
-                        return "translate(" + (xh(d.x0) + 5 * histopadding) + "," + yh(d.length) + ")";
+                        return 'translate(' + (xh(d.x0) + 5 * histopadding) + ',' + yh(d.length) + ')';
                     })
                     .attr('height', function(d) {
                         return popupHeight - yh(d.length) - 4;
@@ -703,7 +824,7 @@ d3.text('urbana_reduced.csv', function(error, data) {
 
         var yBarViewAxis = d3.axisLeft(barViewLogScale)
             .tickFormat(function (d) {
-                return barViewLogScale.tickFormat(4, d3.format(",d"))(d)
+                return barViewLogScale.tickFormat(4, d3.format(',d'))(d)
             });
 
         barView.append('g')
@@ -718,7 +839,7 @@ d3.text('urbana_reduced.csv', function(error, data) {
             .text('Cities');
 
         barView.append('text')
-            .attr("transform", "rotate(-90)")
+            .attr('transform', 'rotate(-90)')
             .attr('x', -((barViewHeight) / 2 - 10) )
             .attr('y', 2*histopadding - 3)
             .style('text-anchor', 'middle')
@@ -799,7 +920,7 @@ d3.text('urbana_reduced.csv', function(error, data) {
             label.enter()
                 .append('text')
                 .attr('class', 'gangsterdata')
-                .attr("transform", "rotate(-90)")
+                .attr('transform', 'rotate(-90)')
                 .attr('x', function(){
                     return - (barViewHeight - 40);
                 })
@@ -1005,115 +1126,178 @@ d3.text('urbana_reduced.csv', function(error, data) {
             return filteredData;
         }
 
-        ///////////////////
-        //  scatterplot  //
-        ///////////////////
-        var scatterView = body.append('div')
-            .style('margin-top' , 5 + 'px')
-            .append('svg')
-            .attr('id', 'scatterView')
-            .attr('class', 'view')
-            .attr('height', rightViewHeight)
-            .attr('width', rightViewWidth)
-            .style('outline', 'thin solid black');
-
-        var scatBrush = d3.brushX()
-            .extent([[20, 10], [rightViewWidth - 20, 50]]);
-
-        scatterView.append('g')
-            .attr('class', 'scatBrush')
-            .attr('transform', 'translate(' + 0 + ',' + (rightViewHeight - 90) + ')');
-
-
-        scatterView.append('defs')
-            .append('clipPath')
-            .attr('id', 'clip')
-            .append('rect')
-            .attr('width', rightViewWidth)
-            .attr('height', rightViewHeight);
-
-        var x1Scatter = d3.scaleTime().range([20, rightViewWidth - 20]);
-        var x2Scatter = d3.scaleTime().range([20, rightViewWidth - 20]);
-        var y1Scatter = d3.scaleLinear().range([rightViewHeight - 110 , 10]);
-        var y2Scatter = d3.scaleLinear().range([rightViewHeight - 10 , rightViewHeight - 20]);
-
-        scatBrush.on('end', brushed);
-
-        var dots = scatterView.append('g')
-            .attr('id', 'scatterDots');
-
-
-
-        var x1ScatterAxis = d3.axisBottom(x1Scatter),
-            x2ScatterAxis = d3.axisBottom(x2Scatter),
-            y1ScatterAxis = d3.axisLeft(y1Scatter);
-
-        scatterView.append('g')
-            .attr('class', 'axis x-axis')
-            .attr('transform', 'translate(0,' + (rightViewHeight - 100) + ')');
-
-        scatterView.append('g')
-            .attr('class', 'axis x2-axis')
-            .attr('transform', 'translate(0,' + (rightViewHeight - 30) + ')');
+        ageBrush.on('end', ageBrushed);
+        scatBrush.on('end', scatterBrushed);
+        drawAgeView();
+        updateScatterView();
 
         function updateScatterView() {
 
             dots.selectAll('.dot').remove();
-
-            // apply brushing to this group
-
-
-            scatterView.select('.scatBrush')
-                .call(scatBrush)
-                // set brush over full window
-                .call(scatBrush.move, [20, rightViewWidth - 20])
-                .select('.selection')
-                .style('fill','blue');
+            ctxDots.selectAll('.ctxDot').remove();
 
             let pointCtr = 0;
             let newdata = yearFilter(context.filter(function (d) {
-                    if (d[2].toUpperCase().includes("URBANA"))
+                    if (d[2].toUpperCase().includes('URBANA'))
                         return pointCtr++ < 55000;
                     else
                         return true;
                 }
             ), currentYear);
 
+            scatterView.select('.scatBrush')
+                .call(scatBrush)
+                // set brush over full window
+                .call(scatBrush.move, x1Scatter.range())
+                .select('.selection')
+                .style('fill','blue');
+
+
+
             x1Scatter.domain([new Date(currentYear, 0, 1, 0, 0, 0, 0), new Date(currentYear, 12, 1, 0, 0, 0, 0)]);
-
-            scatterView.select('.x2-axis')
-                .attr('dx', -20)
-                .call(x1ScatterAxis);
-
             x2Scatter.domain(x1Scatter.domain());
-
-            scatterView.select('.x-axis').call(x2ScatterAxis);
-
             y1Scatter.domain([0, d3.max(newdata, function (d) {
                 return d[5]; // distance
             })]);
-
             y2Scatter.domain(y1Scatter.domain());
 
-            dots.attr('clip-path', 'url(#clip)');
+            scatterView.select('.x-axis').call(x1ScatterAxis);
+            scatterView.select('.x2-axis').call(x2ScatterAxis);
+            scatterView.select('.y-axis').call(yScatterAxis);
+
+            dots.attr('clip-path', 'url(#clip2)');
             dots.selectAll('.dot')
                 .data(newdata)
                 .enter()
                 .append('circle')
                 .attr('class', 'dot')
-                .attr('r',2)
+                .attr('r', 2)
                 .style('opacity', .5)
                 .attr('cx', function(d) { return x1Scatter(d[4]); })
                 .attr('cy', function(d) { return y1Scatter(d[5]); });
+
+            ctxDots.selectAll('.ctxDot')
+                .data(newdata)
+                .enter()
+                .append('circle')
+                .attr('class', 'ctxDot')
+                .attr('r', 1)
+                .style('opacity', .5)
+                .attr('cx', function(d) { return x2Scatter(d[4]); })
+                .attr('cy', function(d) { return y2Scatter(d[5]); });
         }
 
-        function brushed() {
-            var selection = d3.event.selection;
-            x1Scatter.domain(selection.map(x2Scatter.invert, x2Scatter));
-            scatterView.selectAll('.dot')
-                .attr('cx', function(d) { return x1Scatter(d[4]); })
-                .attr('cy', function(d) { return y1Scatter(d[5]); });
-            scatterView.select(".x-axis").call(x1ScatterAxis);
+        function scatterBrushed() {
+            let selection = d3.event.selection;
+            if (selection) {
+                x1Scatter.domain(selection.map(x2Scatter.invert, x2Scatter));
+                scatterView.selectAll('.dot')
+                    .attr('cx', function (d) {
+                        return x1Scatter(d[4]);
+                    })
+                    .attr('cy', function (d) {
+                        return y1Scatter(d[5]);
+                    });
+                scatterView.select('.x-axis').call(x1ScatterAxis);
+            }
+        }
+
+
+
+        function drawAgeView() {
+
+            let ageRange = [5, 95];
+
+            let threshold = d3.range(ageRange[0], ageRange[1], 1);
+
+            x1Age.domain(ageRange);
+            x2Age.domain(x1Age.domain());
+
+
+            let histogram = d3.histogram()
+                .domain(x1Age.domain())
+                .thresholds(threshold)
+                .value(function (d) {
+                    return d[3]; // age
+                });
+
+
+            let bins = histogram(context);
+
+            y1Age.domain([0, d3.max(bins, function (d) {
+                return d.length;
+            })]);
+
+
+
+            y2Age.domain(y1Age.domain());
+
+            ageView.select('.x-axis').call(x1AgeAxis);
+            ageView.select('.x2-axis').call(x2AgeAxis);
+            ageView.select('.y-axis').call(yAgeAxis);
+
+            bars.attr('clip-path', 'url(#clip)');
+
+            bars.selectAll('.bar')
+                .data(bins, function (d) {
+                    return d;
+                })
+                .enter()
+                .append('rect')
+                .attr('id', 'ageBar')
+                .attr('class', 'bar')
+                .attr('transform', function (d) {
+                    return 'translate(' + (x1Age(d.x0) - 2) + ',' + (y1Age(d.length)) + ')';
+                })
+                .attr('width', function (d) {
+                    return x1Age(d.x1) - x1Age(d.x0);
+                })
+                .attr('height', function(d) {
+                    return rightViewHeight - y1Age(d.length) - 109;
+                });
+
+
+
+            ctxBars.selectAll('.ctxBar')
+                .data(bins, function (d) {
+                    return d;
+                })
+                .enter()
+                .append('rect')
+                .attr('id', 'ctxAgeBar')
+                .attr('class', 'bar')
+                .attr('transform', function (d) {
+                    return 'translate(' + (x2Age(d.x0) - 2) + ',' + (y2Age(d.length)) + ')';
+                })
+                .attr('width', function (d) {
+                    return x2Age(d.x1) - x2Age(d.x0);
+                })
+                .attr('height', function(d) {
+                    return rightViewHeight - y2Age(d.length) - 40;
+                });
+
+            ageView.select('.ageBrush')
+                .call(ageBrush)
+                // set brush over full window
+                .call(ageBrush.move, x1Age.range())
+                .select('.selection')
+                .style('fill','green');
+
+
+
+
+        }
+
+        function ageBrushed() {
+            let selection2 = d3.event.selection;
+            if (selection2) {
+                x1Age.domain(selection2.map(x2Age.invert, x2Age));
+                ageView.selectAll('#ageBar')
+                    .attr('transform', (d) => {
+                        return 'translate(' + (x1Age(d.x0) - 2) + ',' + y1Age(d.length) + ')';
+                    });
+                ageView.select('.x-axis').call(x1AgeAxis);
+            }
         }
 
     });
